@@ -1,12 +1,14 @@
 """Reproduce all Day 1 results with one command:
 
-    python -m scripts.run_day1      (or: make day1)
+    python -m scripts.run_day1              (or: make day1)
+    python -m scripts.run_day1 --reuse-llm  (re-score saved LLM outputs, no API calls)
 
 Steps: generate synthetic data -> export JSON Schemas -> validate test set -> run baselines -> score -> comparison table.
 """
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from datetime import datetime, timezone
 
@@ -33,7 +35,10 @@ def main() -> None:
     print("== 3b compute pain model (estimate)"); pain_model.main()
     print("== 4/5 run baselines")
     keyword_baseline.run(); print("keyword_baseline: done")
-    naive_status = naive_llm_baseline.run()
+    if "--reuse-llm" in sys.argv:  # re-score saved LLM outputs without new API calls
+        naive_status = naive_llm_baseline.reparse(); print("naive_llm_baseline: re-parsed saved outputs (no API calls)")
+    else:
+        naive_status = naive_llm_baseline.run()
 
     print("== 5/5 score")
     summaries: dict[str, dict | None] = {}
@@ -42,7 +47,7 @@ def main() -> None:
         pred = results_dir / f"{name}_predictions.jsonl"
         if name == "naive_llm_baseline" and naive_status == "not_run":
             summaries[name] = None
-            md_parts.append(f"### {name}\n\n**NOT RUN** — no ANTHROPIC_API_KEY in `.env`. No numbers recorded.\n")
+            md_parts.append(f"### {name}\n\n**NOT RUN** — no LLM API key in `.env`. No numbers recorded.\n")
             continue
         res = evaluate(pred)
         (results_dir / f"{name}_results.json").write_text(json.dumps(res, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -50,6 +55,14 @@ def main() -> None:
         (results_dir / f"{name}_results.md").write_text(md, encoding="utf-8")
         summaries[name] = res["summary"]
         md_parts.append(md)
+
+    if naive_status != "not_run":  # keep every model's evidence: eval/results/archive/<model>/ (ADR-015)
+        model = s["llm"]["model"]
+        arch = results_dir / "archive" / model
+        arch.mkdir(parents=True, exist_ok=True)
+        for f in ["predictions.jsonl", "results.json", "results.md", "status.json"]:
+            shutil.copyfile(results_dir / f"naive_llm_baseline_{f}", arch / f"naive_llm_baseline_{f}")
+        print(f"archived naive_llm_baseline results -> {arch.relative_to(ROOT).as_posix()}")
 
     header = ["| Metric | " + " | ".join(summaries) + " |", "|---|" + "---|" * len(summaries)]
     rows = []

@@ -42,7 +42,7 @@ When a new support ticket arrives, the assistant reads it, looks up the customer
 ## Day-by-day plan
 | Day | Focus | Exit criterion |
 |---|---|---|
-| **2** Build core | Triage pipeline: validation → redaction → LLM structured output (Haiku-class, cheap) → rules layer → fallback. Run the naive LLM baseline once a key is available. Grow the test set toward 30+. | Pipeline produces schema-valid output on all 12. First scores logged. |
+| **2** Build core | Triage pipeline: validation → redaction → LLM structured output (`qwen3.8-27b`; must cut its 28 s latency to < 5 s, else fall back to `deepseek-v4.1-flash`) → rules layer → fallback. Grow the test set toward 30+. | Pipeline produces schema-valid output on all 12. First scores logged. |
 | **3** Integrate | Customer context adapter + ticketing/CSV adapter. Retries, timeouts, structured logging, cost tracking. | End-to-end run from inbound JSON to ticket fields + note, with context used in decisions. |
 | **4** Evaluate & learn | Error analysis per case. Prompt/rule iteration with before/after scores. Feedback log from simulated rep edits added to eval. LLM-judge or human check for summaries. | Safety gates G1–G5 pass. Regression report committed. |
 | **5** UX & ship | Non-developer review screen. Runbook. Final eval vs both baselines. Demo + write-up with honest limits. | All gates evaluated and reported; demo runs from one command. |

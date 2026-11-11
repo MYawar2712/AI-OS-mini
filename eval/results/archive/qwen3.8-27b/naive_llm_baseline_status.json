@@ -1,0 +1,7 @@
+{
+  "baseline": "naive_llm_baseline",
+  "status": "run",
+  "provider": "dashscope",
+  "model": "qwen3.8-27b",
+  "n": 12
+}

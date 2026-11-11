@@ -17,7 +17,7 @@ python -m scripts.run_day1     # or: make day1   (reproduces all Day 1 results)
 python -m pytest               # or: make test
 ```
 
-Optional, for the naive LLM baseline: `cp .env.example .env` and set `ANTHROPIC_API_KEY`. Without a key, that baseline is recorded as **not run**. Its results are never simulated.
+For the naive LLM baseline: `cp .env.example .env` and set `DASHSCOPE_API_KEY` (Alibaba Cloud Model Studio, International region). Without a key, that baseline is recorded as **not run**. Its results are never simulated. To re-score saved LLM outputs without new API calls: `python -m scripts.run_day1 --reuse-llm`.
 
 `run_day1` does the following: it generates synthetic data (seed 42), exports JSON Schemas, validates the 12 test cases, computes the pain model, runs both baselines, scores them, and writes `eval/results/baseline_comparison.md`.
 
@@ -26,12 +26,13 @@ Optional, for the naive LLM baseline: `cp .env.example .env` and set `ANTHROPIC_
 | Path | What |
 |---|---|
 | `config/taxonomy.yaml` | Intents, P1–P4 definitions + tie-breaks, queues, escalation reasons (single source of truth) |
-| `config/settings.yaml` | Seed, model (`claude-haiku-5-5`), token prices, labour-cost assumptions |
+| `config/settings.yaml` | Seed, LLM provider/model (`qwen3.8-27b` via Alibaba Cloud), token prices, labour-cost assumptions |
 | `config/pain_model.yaml` | Pain/cost model inputs (all assumed) |
+| `src/llm_client.py` | Provider-agnostic LLM call (Alibaba Cloud OpenAI-compatible endpoint; Anthropic optional) |
 | `src/schemas.py` | Pydantic v2 contracts: `InboundTicket`, `TriageResult`, `TestCase` |
 | `schemas/` | Exported JSON Schemas |
 | `data/synthetic/` | 25 fictional customer accounts, 15 KB articles |
-| `scripts/` | `run_day1`, `generate_synthetic`, `pain_model` |
+| `scripts/` | `run_day1`, `generate_synthetic`, `pain_model`, `compare_models` (ranks archived model runs) |
 | `baselines/` | `keyword_baseline` (rules, no LLM), `naive_llm_baseline` (one free-text prompt) |
 | `eval/` | `test_cases.jsonl` (12), `rubric.md`, `metrics.py`, `results/`, manual timing template |
 | `tests/` | Schema, taxonomy-consistency, metrics and baseline tests |

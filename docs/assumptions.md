@@ -2,6 +2,8 @@
 
 Confidence: **H** = high, **M** = medium, **L** = low. Nothing here is measured from production. Update this file whenever an interview or measurement changes a value.
 
+> **No access to support staff during the challenge.** Validation with a real user is planned but deferred. Lower-effort substitutes (proxy rep, LLM second labeller, public benchmarks; ~45 min to ~1.5 h) are listed in [00_day1_summary.md → Validation gaps](day1/00_day1_summary.md#validation-gaps-and-how-to-close-them).
+
 | ID | Assumption | Confidence | How to validate with a real user / data |
 |---|---|---|---|
 | A-01 | Target user is a Tier-1 rep at a B2B field-service SaaS, triaging email/portal/chat/phone-note tickets | M | Interview Q1; shadow one triage session |
@@ -18,6 +20,7 @@ Confidence: **H** = high, **M** = medium, **L** = low. Nothing here is measured 
 | A-12 | Ticket traffic is predominantly English; mixed English + Roman Urdu phrases occur, but non-English-dominant tickets are rare | M (owner statement) | Language-detect a sample of real tickets |
 | A-13 | Reps will accept a pre-filled triage if they can see the reasons, and will correct it when wrong | M | Interview Q10; pilot edit-rate |
 | A-14 | Customer can usually be identified from a customer ID or sender domain; unknown senders are a minority | M | Share of tickets with no matched organisation in the ticketing system |
-| A-15 | Haiku-class model quality is enough for triage when combined with rules | M | Day 2–4 eval on the growing test set; compare one run with a larger model |
-| A-16 | ~2,500 input / 400 output tokens per ticket for the Day 2 pipeline (cost projection) | M | Measure `usage` on Day 2 |
+| A-15 | A low-cost model (`qwen3.8-27b`, selected from 3) is good enough for triage when combined with rules. All 3 naive runs got 92% intent accuracy but only 42–50% priority accuracy, so priority must come from rules | M | Day 2–4 eval on the growing test set; compare one run with a larger model |
+| A-16 | ~2,500 input / 400 output tokens per ticket for the Day 2 pipeline (cost projection). Measured on naive runs: ≈ 240–260 in / 960–1,040 out, mostly hidden reasoning | M | Measure `usage` on Day 2 |
 | A-17 | Synthetic tickets are realistic enough to reveal the main failure modes | M | Ask a rep to rate realism of the 12 tickets (1–5) and to supply 5 anonymised real patterns |
+| A-18 | With AI pre-filled triage, a rep needs ~0.5–1 min per ticket to check and accept/edit (vs ~2–5 min manual, A-04). The LLM runs on arrival, so its latency isn't rep time | L | Time reps reviewing pre-filled triage in the Day 5 demo / pilot; log accept vs edit and seconds per ticket |

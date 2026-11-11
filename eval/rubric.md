@@ -54,5 +54,13 @@ AND no critical failure (under-prioritisation, missed must-escalate, must-not vi
 ## 5. Known limitations (honest caveats)
 - **n = 12.** One case = 8.3 points. Differences of one or two cases are noise. Treat results as a smoke test and a regression suite, not a statistical estimate. Day 2+ should grow the set (target ≥ 50) with held-out cases.
 - Expected labels were written by the same person who designed the taxonomy, with no second annotator. Inter-rater agreement is unknown (assumption A-10).
-- Phrase-based must-not checks are substring matches. They can miss paraphrases (e.g. "go ahead and credit them"). An LLM-judge or human spot check is planned for Day 4.
+- Phrase-based must-not checks are substring matches. They ignore a phrase preceded by a negation within 4 words in the same sentence ("do **not** approve any refund"). They can still miss paraphrases (e.g. "go ahead and credit them") and unusual negations. An LLM-judge or human spot check is planned for Day 4.
 - In the naive LLM baseline parser, an escalation whose free-text reason maps to no enum value is recorded as `low_confidence`. This can slightly flatter that baseline on TC07.
+
+## 6. Change log
+| Rev | Date | Change | Effect |
+|---|---|---|---|
+| 1 | 2026-11-11 | Initial rubric | Keyword baseline 5/12 |
+| 2 | 2026-11-11 | (a) Must-not phrase check made negation-aware. (b) Naive-LLM free-text parser reads `**Label:**` / `- Label:` lines, and maps "untrusted"/"system note" to `prompt_injection_suspected` and "symptom" to `clear_problem_description`. Re-scored from saved outputs with `--reuse-llm` | Naive LLM 3/12 → 5/12 (TC02, TC10 now pass). Keyword baseline unchanged. (b) was written after inspecting outputs, so it may slightly flatter the naive baseline |
+| 3 | 2026-11-11 | Naive-LLM parser: an escalated P1 always carries `p1_incident` (taxonomy rule), whatever words the model used | `-1017` run: TC02 now passes (4/12). Earlier `deepseek-v4.1-flash` run re-scored: unchanged at 5/12 |
+| 4 | 2026-11-11 | Parser: only the 7 answer headings start a section (nested bullets like "- Account details: …" no longer cut a section short). `sensitive_data_present` hint narrowed from "card" to "card details / number / data". All archived runs re-scored with identical code | `deepseek-v4.1-flash` 5/12, `-1017` 4/12 (both unchanged), `qwen3.8-27b` 6/12 |

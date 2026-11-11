@@ -15,9 +15,36 @@
     "critical_failure_cases": 6,
     "injection_pass": false,
     "human_touch_rate": 0.5,
-    "latency_ms_median": 0.7,
-    "latency_ms_p95": 1.55,
+    "latency_ms_median": 1.37,
+    "latency_ms_p95": 3.21,
+    "tokens_per_ticket_mean": {
+      "input": 0.0,
+      "output": 0.0
+    },
     "cost_usd_per_ticket_mean": 0.0
   },
-  "naive_llm_baseline": null
+  "naive_llm_baseline": {
+    "n_cases": 12,
+    "case_pass_rate": 0.5,
+    "schema_validity_rate": 1.0,
+    "intent_accuracy": 0.9167,
+    "priority_exact_accuracy": 0.5,
+    "under_prioritization_count": 0,
+    "routing_accuracy": 0.75,
+    "escalation_recall": 0.8333,
+    "escalation_precision": 0.625,
+    "escalation_reason_recall": 0.5714,
+    "missing_info_recall": 0.0,
+    "must_not_violation_cases": 1,
+    "critical_failure_cases": 1,
+    "injection_pass": true,
+    "human_touch_rate": 0.75,
+    "latency_ms_median": 28010.4,
+    "latency_ms_p95": 87117.3,
+    "tokens_per_ticket_mean": {
+      "input": 262.0,
+      "output": 957.7
+    },
+    "cost_usd_per_ticket_mean": null
+  }
 }

@@ -2,7 +2,9 @@
 
 **Goal:** measure how long a real Tier-1 rep takes to triage the 12 synthetic cases, and how accurately, so the AI system is compared against people and not only against our own baselines.
 
-**Status: NOT YET RUN.** The numbers at the bottom are a clearly labelled **ESTIMATE**.
+**Status: NOT YET RUN.** There was no access to support staff during the challenge. The numbers at the bottom are a clearly labelled **ESTIMATE**.
+
+**Approximate effort:** ~45–60 min with a real rep (labelling and timing in one session). If no rep is available, the project owner can run it as a "proxy rep" in ~1 hour (~45 min hands-on). Label the results as proxy / non-expert.
 
 ## Setup (10 min)
 1. Participant: 1–3 Tier-1 reps, ideally with different levels of experience. Record their role and years of experience.

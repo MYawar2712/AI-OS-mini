@@ -9,6 +9,7 @@ Prediction record (one JSON object per line):
 from __future__ import annotations
 
 import json
+import re
 import statistics
 import sys
 from pathlib import Path
@@ -25,9 +26,24 @@ def load_predictions(path: str | Path) -> dict[str, dict]:
     return {r["ticket_id"]: r for r in recs}
 
 
+_NEGATIONS = ("not", "never", "no", "don't", "do not", "without", "avoid", "refuse", "decline")
+
+
+def _negated(low: str, idx: int) -> bool:
+    """True if one of the 4 words before position idx (same sentence) is a negation, e.g. 'do not approve any refund'."""
+    before = re.split(r"[.!?;\n]", low[:idx])[-1]
+    return any(w in _NEGATIONS for w in re.findall(r"[a-z']+", before)[-4:])
+
+
 def _contains_any(text: str, phrases: list[str]) -> list[str]:
+    """Forbidden phrases that appear in a NON-negated position. Negation-aware since Day 1 rev 2 (see rubric)."""
     low = text.lower()
-    return [p for p in phrases if p.lower() in low]
+    hits = []
+    for p in phrases:
+        pl = p.lower()
+        if any(not _negated(low, m.start()) for m in re.finditer(re.escape(pl), low)):
+            hits.append(p)
+    return hits
 
 
 def score_case(case: TestCase, record: dict | None, pricing: dict) -> dict[str, Any]:
@@ -48,8 +64,13 @@ def score_case(case: TestCase, record: dict | None, pricing: dict) -> dict[str, 
     # Operational metrics are recorded even for invalid outputs (the call still cost time and money).
     rec = record or {}
     out["latency_ms"] = rec.get("latency_ms")
-    p = pricing.get(rec.get("model", ""), {"input": 0.0, "output": 0.0})
-    out["cost_usd"] = (rec.get("input_tokens", 0) * p["input"] + rec.get("output_tokens", 0) * p["output"]) / 1_000_000
+    out["input_tokens"] = rec.get("input_tokens", 0)
+    out["output_tokens"] = rec.get("output_tokens", 0)
+    p = pricing.get(rec.get("model", ""))
+    if p is None or p.get("input") is None or p.get("output") is None:
+        out["cost_usd"] = None  # unknown price: never report a made-up $0
+    else:
+        out["cost_usd"] = (out["input_tokens"] * p["input"] + out["output_tokens"] * p["output"]) / 1_000_000
 
     if pred is None:
         out.update(intent_correct=False, secondary_ok=None, priority_exact=False, priority_acceptable=False,
@@ -146,7 +167,10 @@ def aggregate(rows: list[dict]) -> dict[str, Any]:
         "human_touch_rate": _ratio(sum(r["needs_human_touch"] for r in rows), n),
         "latency_ms_median": round(statistics.median(lat), 2) if lat else None,
         "latency_ms_p95": round(sorted(lat)[max(0, int(round(0.95 * len(lat))) - 1)], 2) if lat else None,
-        "cost_usd_per_ticket_mean": round(sum(r["cost_usd"] for r in rows) / n, 6) if n else None,
+        "tokens_per_ticket_mean": {"input": round(sum(r["input_tokens"] for r in rows) / n, 1),
+                                   "output": round(sum(r["output_tokens"] for r in rows) / n, 1)} if n else None,
+        "cost_usd_per_ticket_mean": (round(sum(r["cost_usd"] for r in rows) / n, 6)
+                                     if n and all(r["cost_usd"] is not None for r in rows) else None),
     }
 
 
@@ -173,6 +197,8 @@ def _fmt(key: str, v: Any) -> str:
         return "n/a"
     if isinstance(v, bool):
         return "PASS" if v else "FAIL"
+    if isinstance(v, dict):
+        return " / ".join(f"{k} {x:g}" for k, x in v.items())
     if key.endswith(_RATE_SUFFIXES):
         return f"{v:.0%}"
     if key.startswith("cost_usd"):

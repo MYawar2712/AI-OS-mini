@@ -38,9 +38,11 @@ def test_naive_parser_reports_unparseable():
     assert pred is None and "could not parse" in err
 
 
-def test_naive_baseline_skips_without_key(monkeypatch):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
-    monkeypatch.setattr(naive_llm_baseline, "load_dotenv", lambda *a, **k: None)
+def test_naive_baseline_skips_without_key(monkeypatch, tmp_path):
+    monkeypatch.setattr(naive_llm_baseline, "is_configured", lambda: False)
+    # Don't clobber real results: point outputs at a temp dir.
+    monkeypatch.setattr(naive_llm_baseline, "STATUS_PATH", tmp_path / "status.json")
+    monkeypatch.setattr(naive_llm_baseline, "results_path", lambda name: tmp_path / f"{name}_predictions.jsonl")
     assert naive_llm_baseline.run() == "not_run"
-    status = json.loads(naive_llm_baseline.STATUS_PATH.read_text())
+    status = json.loads((tmp_path / "status.json").read_text())
     assert status["status"] == "not_run"

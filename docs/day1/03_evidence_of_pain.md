@@ -29,9 +29,9 @@
 | **Labour cost / year** | **£13.5k** | **£43.7k** | **£143.7k** |
 | Priority errors / week | 42 | 112 | 244 |
 | Customer wait hours added / week | 32 | 270 | 1,170 |
-| Projected LLM cost / week (Haiku-class, ~2.5k in / 0.4k out tokens per ticket) | $0.24 | $0.34 | $0.44 |
+| Projected LLM cost / week (`qwen3.8-27b`) | n/a | n/a | n/a: price per token not yet entered in `config/settings.yaml` |
 
-**Reading this table:** even in the low scenario, triage costs over half an FTE. The base case spends **60 hours a week** on triage and rework. Running an LLM on every ticket is projected at **under $1/week**, so model cost is not the constraint: **accuracy and safety are.** The money case is not "replace a rep". It is: give back roughly 1 FTE of time and cut misroutes and under-prioritisation.
+**Reading this table:** even in the low scenario, triage costs over half an FTE. The base case spends **60 hours a week** on triage and rework. On a low-cost "flash"-tier model, running an LLM on every ticket should cost a few dollars a week at most (to confirm once the price is entered), so model cost is not the constraint: **accuracy and safety are.** The money case is not "replace a rep". It is: give back roughly 1 FTE of time and cut misroutes and under-prioritisation.
 
 The model **excludes** the cost of a missed P1 (idle field teams) and of churn. These are rarer but much larger, so we treat them as **safety gates** rather than putting a £ value on them.
 

@@ -1,6 +1,7 @@
 {
   "baseline": "naive_llm_baseline",
-  "status": "not_run",
-  "reason": "ANTHROPIC_API_KEY not set in .env",
-  "model": "claude-haiku-5-5"
+  "status": "run",
+  "provider": "dashscope",
+  "model": "qwen3.8-27b",
+  "n": 12
 }

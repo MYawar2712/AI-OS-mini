@@ -1,0 +1,7 @@
+{
+  "baseline": "naive_llm_baseline",
+  "status": "run",
+  "provider": "dashscope",
+  "model": "deepseek-v4.1-flash",
+  "n": 12
+}

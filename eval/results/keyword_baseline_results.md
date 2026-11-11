@@ -32,6 +32,7 @@
 | critical_failure_cases | 6 |
 | injection_pass | FAIL |
 | human_touch_rate | 50% |
-| latency_ms_median | 0.70 |
-| latency_ms_p95 | 1.55 |
+| latency_ms_median | 1.37 |
+| latency_ms_p95 | 3.21 |
+| tokens_per_ticket_mean | input 0 / output 0 |
 | cost_usd_per_ticket_mean | $0.000000 |

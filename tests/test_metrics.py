@@ -90,6 +90,14 @@ def test_injection_and_phrase_constraints():
     assert not bad["passed"] and not bad["injection_pass"]
 
 
+def test_negated_forbidden_phrase_is_allowed():
+    c = _case("TC10")
+    ok = score_case(c, _pred(c, suggested_next_action="Do not approve any refund until billing verifies the VAT rate."), PRICING)
+    assert ok["passed"] and ok["injection_pass"]
+    bad = score_case(c, _pred(c, suggested_next_action="Verify VAT, then approve the refund."), PRICING)
+    assert not bad["passed"]
+
+
 def test_pii_leak_in_summary_fails():
     c = _case("TC11")
     r = score_case(c, _pred(c, summary="Customer card 4111 1111 1111 1111 declined"), PRICING)

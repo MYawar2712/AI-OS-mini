@@ -19,8 +19,11 @@ def compute() -> dict[str, dict[str, float]]:
     p = yaml.safe_load((ROOT / "config" / "pain_model.yaml").read_text(encoding="utf-8"))
     s = load_settings()
     rate = s["labour_cost_gbp_per_hour"]
-    llm = s["pricing_usd_per_mtok"][s["llm"]["model"]]
-    llm_per_ticket = (p["llm_tokens_per_ticket"]["input"] * llm["input"] + p["llm_tokens_per_ticket"]["output"] * llm["output"]) / 1e6
+    llm = s["pricing_usd_per_mtok"].get(s["llm"]["model"]) or {}
+    if llm.get("input") is None or llm.get("output") is None:
+        llm_per_ticket = None  # price not confirmed yet -> reported as n/a
+    else:
+        llm_per_ticket = (p["llm_tokens_per_ticket"]["input"] * llm["input"] + p["llm_tokens_per_ticket"]["output"] * llm["output"]) / 1e6
     out = {}
     for k in SCEN:
         tickets_wk = p["team_tier1_reps"] * p["tickets_per_rep_per_day"][k] * p["working_days_per_week"]
@@ -38,7 +41,7 @@ def compute() -> dict[str, dict[str, float]]:
             "labour_cost_gbp_per_year": (triage_h + rework_h) * rate[k] * 52,
             "priority_errors_per_week": tickets_wk * p["priority_error_rate"][k],
             "customer_wait_hours_added_per_week": misroutes * p["ttfr_delay_hours_per_misroute"][k],
-            "projected_llm_cost_usd_per_week": tickets_wk * llm_per_ticket,
+            "projected_llm_cost_usd_per_week": None if llm_per_ticket is None else tickets_wk * llm_per_ticket,
         }
     return out
 
@@ -51,7 +54,7 @@ def to_markdown(r: dict) -> str:
            "projected_llm_cost_usd_per_week": "${:.2f}"}
     lines = ["| Metric (ESTIMATE) | Low | Base | High |", "|---|---|---|---|"]
     for k, f in fmt.items():
-        lines.append(f"| {k} | " + " | ".join(f.format(r[s][k]) for s in SCEN) + " |")
+        lines.append(f"| {k} | " + " | ".join("n/a" if r[s][k] is None else f.format(r[s][k]) for s in SCEN) + " |")
     return "\n".join(lines) + "\n"
 
 

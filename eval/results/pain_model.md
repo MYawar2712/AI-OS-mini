@@ -12,4 +12,4 @@
 | labour_cost_gbp_per_year | £13,541 | £43,680 | £143,650 |
 | priority_errors_per_week | 42 | 112 | 244 |
 | customer_wait_hours_added_per_week | 32 | 270 | 1170 |
-| projected_llm_cost_usd_per_week | $0.24 | $0.34 | $0.44 |
+| projected_llm_cost_usd_per_week | n/a | n/a | n/a |

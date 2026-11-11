@@ -7,22 +7,19 @@ Deliberately naive, to represent what a rep gets by pasting a ticket into a chat
 The label NAMES are given (otherwise the output cannot be scored at all), but not their definitions.
 Free text is parsed with best-effort regexes; unparseable fields make the record schema-invalid.
 
-If ANTHROPIC_API_KEY is not set, the run is skipped and recorded as "not_run" — results are never faked.
+If the provider API key (config llm.api_key_env, e.g. DASHSCOPE_API_KEY) is not set, the run is skipped and recorded as "not_run" — results are never faked.
 
     python -m baselines.naive_llm_baseline
 """
 from __future__ import annotations
 
 import json
-import os
 import re
-import time
-
-from dotenv import load_dotenv
 
 from baselines.common import load_tickets, results_path, write_predictions
+from src.llm_client import LLMCallError, api_key_env_var, call_llm, is_configured
 from src.schemas import InboundTicket
-from src.taxonomy import ROOT, load_settings, load_taxonomy
+from src.taxonomy import load_settings, load_taxonomy
 
 NAME = "naive_llm_baseline"
 STATUS_PATH = results_path(NAME).with_name(f"{NAME}_status.json")
@@ -50,8 +47,8 @@ _REASON_HINTS = {
     "p1_incident": ["p1", "critical", "outage", "major incident"],
     "conflicting_intents": ["multiple issues", "two issues", "both", "multi"],
     "missing_account_id": ["account id", "no account", "unidentified", "customer id"],
-    "prompt_injection_suspected": ["injection", "instruction", "manipulat", "suspicious note"],
-    "sensitive_data_present": ["card", "pci", "sensitive", "pii", "cvv"],
+    "prompt_injection_suspected": ["injection", "instruction", "manipulat", "suspicious note", "untrusted", "system note"],
+    "sensitive_data_present": ["card details", "card number", "card data", "pci", "sensitive", "pii", "cvv"],
     "low_confidence": ["unclear", "vague", "insufficient", "not enough information"],
 }
 _MISSING_HINTS = {
@@ -63,7 +60,7 @@ _MISSING_HINTS = {
     "job_or_visit_reference": ["job number", "job reference", "visit reference", "job id"],
     "file_sample": ["file", "sample", "attachment"],
     "steps_to_reproduce": ["steps to reproduce", "reproduce"],
-    "clear_problem_description": ["what is broken", "description", "more detail", "details of the issue", "what exactly"],
+    "clear_problem_description": ["what is broken", "description", "more detail", "details of the issue", "what exactly", "symptom"],
 }
 
 
@@ -72,10 +69,29 @@ def _field(text: str, label: str) -> str | None:
     return m.group(1).strip() if m else None
 
 
+_HEADINGS = ("intent", "priority", "queue", "escalat", "missing", "summary", "suggested")
+_LABEL_LINE = re.compile(r"^\s*(?:[-*#]+\s*)?\**\s*([A-Za-z][A-Za-z /()-]{1,40}?)\s*\**\s*:\s*\**\s*(.*)$")
+
+
+def _sections(text: str) -> dict[str, str]:
+    """Split free text into {label (lower-case): body}. A section starts at any line like
+    '- **Missing information:** ...' / 'Escalate: yes' and runs until the next such line."""
+    out: dict[str, str] = {}
+    current = None
+    for line in text.splitlines():
+        m = _LABEL_LINE.match(line)
+        # Only the answer's own headings start a section; nested bullets like "- Account details: ..." stay inside it.
+        if m and any(k in m.group(1).lower() for k in _HEADINGS):
+            current = m.group(1).strip().lower()
+            out[current] = m.group(2).strip()
+        elif current:
+            out[current] += "\n" + line.strip()
+    return out
+
+
 def _section(text: str, label: str) -> str:
-    """Text from a label to the next bold/bulleted label (multi-line answers)."""
-    m = re.search(rf"(?is){label}\W*[:\-](.*?)(?:\n\s*[-*#]*\s*\**(?:intent|priority|queue|escalat|missing|summary|suggested)\b|\Z)", text)
-    return m.group(1).strip() if m else ""
+    """Body of the first section whose label contains `label` (e.g. 'escalat' matches 'Escalate', 'summary' matches 'Short summary')."""
+    return next((body.strip() for name, body in _sections(text).items() if label in name), "")
 
 
 def parse_free_text(ticket: InboundTicket, text: str) -> tuple[dict | None, str | None]:
@@ -93,6 +109,9 @@ def parse_free_text(ticket: InboundTicket, text: str) -> tuple[dict | None, str 
     escalate = em.group(1) == "yes"
     esc_text = _section(text, "escalat").lower()
     reasons = [r for r, hints in _REASON_HINTS.items() if any(h in esc_text for h in hints)] if escalate else []
+    # Taxonomy rule: an escalated P1 is a p1_incident escalation, whatever words the model used (rubric rev 3).
+    if escalate and pm.group(1).upper() == "P1" and "p1_incident" not in reasons:
+        reasons.append("p1_incident")
     if escalate and not reasons:
         reasons = ["low_confidence"]  # unmapped free-text reason; documented in eval/rubric.md
     miss_text = _section(text, "missing").lower()
@@ -107,41 +126,52 @@ def parse_free_text(ticket: InboundTicket, text: str) -> tuple[dict | None, str 
 
 
 def run() -> str:
-    load_dotenv(ROOT / ".env")
-    key = os.getenv("ANTHROPIC_API_KEY", "")
     s = load_settings()["llm"]
-    if not key or "REPLACE_ME" in key:
-        status = {"baseline": NAME, "status": "not_run", "reason": "ANTHROPIC_API_KEY not set in .env", "model": s["model"]}
+    if not is_configured():
+        status = {"baseline": NAME, "status": "not_run", "reason": f"{api_key_env_var()} not set in .env",
+                  "provider": s["provider"], "model": s["model"]}
         STATUS_PATH.write_text(json.dumps(status, indent=2) + "\n", encoding="utf-8")
         results_path(NAME).unlink(missing_ok=True)  # never leave stale predictions behind
         print(f"[naive_llm_baseline] SKIPPED: {status['reason']}. Recorded as not_run (no results fabricated).")
         return "not_run"
 
-    import anthropic
-
-    client = anthropic.Anthropic(timeout=s["timeout_seconds"])
     tax = load_taxonomy()
     records = []
     for t in load_tickets():
         prompt = PROMPT.format(intents=", ".join(tax["intents"]), queues=", ".join(tax["queues"]),
                                subject=t.subject, body=t.body)
-        start = time.perf_counter()
-        rec = {"ticket_id": t.ticket_id, "model": s["model"], "input_tokens": 0, "output_tokens": 0}
+        rec = {"ticket_id": t.ticket_id, "model": s["model"], "input_tokens": 0, "output_tokens": 0, "latency_ms": None}
         try:
-            resp = client.messages.create(model=s["model"], max_tokens=s["max_tokens"],
-                                          output_config={"effort": s["effort"]},
-                                          messages=[{"role": "user", "content": prompt}])
-            text = "".join(b.text for b in resp.content if b.type == "text")
-            rec.update(input_tokens=resp.usage.input_tokens, output_tokens=resp.usage.output_tokens, raw_output=text)
-            pred, err = parse_free_text(t, text)
+            r = call_llm(prompt)
+            rec.update(input_tokens=r.input_tokens, output_tokens=r.output_tokens, latency_ms=r.latency_ms, raw_output=r.text)
+            pred, err = parse_free_text(t, r.text)
             rec.update(prediction=pred, parse_error=err)
-        except anthropic.APIError as e:
-            rec.update(prediction=None, raw_output=None, parse_error=f"api_error: {type(e).__name__}: {e}")
-        rec["latency_ms"] = round((time.perf_counter() - start) * 1000, 1)
+        except LLMCallError as e:
+            rec.update(prediction=None, raw_output=None, parse_error=f"api_error: {e}")
         records.append(rec)
-    STATUS_PATH.write_text(json.dumps({"baseline": NAME, "status": "run", "model": s["model"], "n": len(records)}, indent=2) + "\n", encoding="utf-8")
+        print(f"  {t.ticket_id}: {'ok' if rec.get('prediction') else 'FAILED - ' + str(rec.get('parse_error'))}")
+    STATUS_PATH.write_text(json.dumps({"baseline": NAME, "status": "run", "provider": s["provider"], "model": s["model"],
+                                       "n": len(records)}, indent=2) + "\n", encoding="utf-8")
     return str(write_predictions(NAME, records))
 
 
+def reparse(path=None) -> str:
+    """Re-run the parser over saved raw outputs (no API calls, no cost). Use after parser fixes.
+    `path` defaults to the current predictions file; pass an archived file to re-parse an older model's run."""
+    path = path or results_path(NAME)
+    if not path.exists():
+        return "not_run"
+    tickets = {t.ticket_id: t for t in load_tickets()}
+    records = [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    for rec in records:
+        if rec.get("raw_output"):
+            pred, err = parse_free_text(tickets[rec["ticket_id"]], rec["raw_output"])
+            rec.update(prediction=pred, parse_error=err)
+    path.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in records) + "\n", encoding="utf-8")
+    return str(path)
+
+
 if __name__ == "__main__":
-    print(run())
+    import sys
+
+    print(reparse() if "--reparse" in sys.argv else run())

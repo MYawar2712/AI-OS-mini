@@ -9,16 +9,22 @@ paths:
   kb_articles: data/synthetic/kb_articles.json
 
 llm:
-  provider: anthropic
-  # Cheapest current Claude model, chosen because the project owner asked for extremely low cost (ADR-005).
-  model: claude-haiku-5-5
-  effort: low
-  max_tokens: 1024
+  # Alibaba Cloud Model Studio (International / Singapore region), OpenAI-compatible endpoint (ADR-005, ADR-013).
+  provider: dashscope
+  base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+  api_key_env: DASHSCOPE_API_KEY
+  model: qwen3.8-27b   # selected by scripts.compare_models (ADR-016)
+  max_tokens: 2048                # model spends some output tokens on hidden reasoning; leave headroom
   timeout_seconds: 60
+  # Alternative provider (set provider: anthropic, api_key_env: ANTHROPIC_API_KEY, model: claude-haiku-5-5).
 
 # USD per 1M tokens. Configurable; used by eval/metrics.py for cost-per-ticket.
-# Source: Anthropic public pricing table as of 2026-11 (prompts <= 100K tokens).
+# null = price not yet confirmed -> cost is reported as "n/a" rather than a made-up number.
+# TODO(owner): copy qwen3.8-27b input/output prices from the Model Studio console.
 pricing_usd_per_mtok:
+  qwen3.8-27b: { input: null, output: null }
+  deepseek-v4.1-flash-1017: { input: null, output: null }
+  deepseek-v4.1-flash: { input: null, output: null }
   claude-haiku-5-5: { input: 0.10, output: 0.50 }
   claude-sonnet-5-5: { input: 2.00, output: 10.00 }
   claude-opus-5-5: { input: 4.00, output: 20.00 }
