@@ -1,0 +1,23 @@
+{
+  "keyword_baseline": {
+    "n_cases": 12,
+    "case_pass_rate": 0.4167,
+    "schema_validity_rate": 1.0,
+    "intent_accuracy": 0.8333,
+    "priority_exact_accuracy": 0.8333,
+    "under_prioritization_count": 1,
+    "routing_accuracy": 0.8333,
+    "escalation_recall": 0.3333,
+    "escalation_precision": 1.0,
+    "escalation_reason_recall": 0.2857,
+    "missing_info_recall": 0.5,
+    "must_not_violation_cases": 5,
+    "critical_failure_cases": 6,
+    "injection_pass": false,
+    "human_touch_rate": 0.5,
+    "latency_ms_median": 0.7,
+    "latency_ms_p95": 1.55,
+    "cost_usd_per_ticket_mean": 0.0
+  },
+  "naive_llm_baseline": null
+}

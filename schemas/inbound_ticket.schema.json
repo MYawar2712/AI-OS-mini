@@ -1,0 +1,87 @@
+{
+  "additionalProperties": false,
+  "description": "What the triage system receives. Mirrors a ticketing-system webhook payload.",
+  "properties": {
+    "ticket_id": {
+      "pattern": "^[A-Z0-9-]+$",
+      "title": "Ticket Id",
+      "type": "string"
+    },
+    "received_at": {
+      "format": "date-time",
+      "title": "Received At",
+      "type": "string"
+    },
+    "channel": {
+      "enum": [
+        "email",
+        "portal",
+        "chat",
+        "phone_note"
+      ],
+      "title": "Channel",
+      "type": "string"
+    },
+    "from_name": {
+      "title": "From Name",
+      "type": "string"
+    },
+    "from_email": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "From Email"
+    },
+    "subject": {
+      "title": "Subject",
+      "type": "string"
+    },
+    "body": {
+      "minLength": 1,
+      "title": "Body",
+      "type": "string"
+    },
+    "customer_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "None when the sender could not be matched to an account.",
+      "title": "Customer Id"
+    },
+    "attachments": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Attachments",
+      "type": "array"
+    },
+    "synthetic": {
+      "default": true,
+      "description": "Always true in this repo: no production data is used.",
+      "title": "Synthetic",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "ticket_id",
+    "received_at",
+    "channel",
+    "from_name",
+    "subject",
+    "body"
+  ],
+  "title": "InboundTicket",
+  "type": "object"
+}

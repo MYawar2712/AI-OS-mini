@@ -1,0 +1,9 @@
+[project]
+name = "helpdesk-triage-agent"
+version = "0.1.0"
+description = "AI-assisted Tier-1 help desk triage for field-service SaaS (5-day challenge). Synthetic data only."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ""

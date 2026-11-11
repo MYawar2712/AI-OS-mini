@@ -1,0 +1,2 @@
+participant_id,role,years_experience,case_id,ticket_id,start_time,end_time,seconds_total,seconds_reading,seconds_lookups,lookups_used,intent,secondary_intent,priority,queue,escalate,escalation_reasons,missing_info,summary_written,confidence_1to5,would_ask_colleague,notes
+P01,Tier-1 rep,,TC01,SYN-24101,,,,,,"CRM;billing system",,,,,,,,,,,

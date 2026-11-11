@@ -1,0 +1,5 @@
+pydantic>=2.6,<3
+PyYAML>=6.0
+python-dotenv>=1.0
+pytest>=8.0
+anthropic>=0.70  # only used by the naive LLM baseline; optional at runtime

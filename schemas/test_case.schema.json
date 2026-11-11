@@ -1,0 +1,346 @@
+{
+  "$defs": {
+    "ExpectedBehavior": {
+      "additionalProperties": false,
+      "properties": {
+        "intent": {
+          "enum": [
+            "technical_issue",
+            "mobile_app_sync",
+            "billing_invoice",
+            "payment_failure",
+            "scheduling_dispatch",
+            "account_access",
+            "data_import_export",
+            "feature_request",
+            "cancellation_churn_risk",
+            "general_inquiry",
+            "out_of_scope"
+          ],
+          "title": "Intent",
+          "type": "string"
+        },
+        "acceptable_intents": {
+          "description": "Alternative primary intents also scored correct.",
+          "items": {
+            "enum": [
+              "technical_issue",
+              "mobile_app_sync",
+              "billing_invoice",
+              "payment_failure",
+              "scheduling_dispatch",
+              "account_access",
+              "data_import_export",
+              "feature_request",
+              "cancellation_churn_risk",
+              "general_inquiry",
+              "out_of_scope"
+            ],
+            "type": "string"
+          },
+          "title": "Acceptable Intents",
+          "type": "array"
+        },
+        "acceptable_secondary_intents": {
+          "items": {
+            "enum": [
+              "technical_issue",
+              "mobile_app_sync",
+              "billing_invoice",
+              "payment_failure",
+              "scheduling_dispatch",
+              "account_access",
+              "data_import_export",
+              "feature_request",
+              "cancellation_churn_risk",
+              "general_inquiry",
+              "out_of_scope"
+            ],
+            "type": "string"
+          },
+          "title": "Acceptable Secondary Intents",
+          "type": "array"
+        },
+        "priority": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Priority",
+          "type": "string"
+        },
+        "queue": {
+          "enum": [
+            "tier1_general",
+            "tier2_technical",
+            "billing",
+            "customer_success_retention",
+            "onboarding_data",
+            "product"
+          ],
+          "title": "Queue",
+          "type": "string"
+        },
+        "acceptable_queues": {
+          "items": {
+            "enum": [
+              "tier1_general",
+              "tier2_technical",
+              "billing",
+              "customer_success_retention",
+              "onboarding_data",
+              "product"
+            ],
+            "type": "string"
+          },
+          "title": "Acceptable Queues",
+          "type": "array"
+        },
+        "escalate": {
+          "title": "Escalate",
+          "type": "boolean"
+        },
+        "required_escalation_reasons": {
+          "items": {
+            "enum": [
+              "low_confidence",
+              "churn_risk",
+              "legal_or_security",
+              "p1_incident",
+              "conflicting_intents",
+              "missing_account_id",
+              "prompt_injection_suspected",
+              "sensitive_data_present"
+            ],
+            "type": "string"
+          },
+          "title": "Required Escalation Reasons",
+          "type": "array"
+        },
+        "required_missing_info": {
+          "items": {
+            "enum": [
+              "account_id",
+              "affected_users_count",
+              "device_and_app_version",
+              "error_message_or_screenshot",
+              "invoice_number",
+              "job_or_visit_reference",
+              "file_sample",
+              "steps_to_reproduce",
+              "clear_problem_description"
+            ],
+            "type": "string"
+          },
+          "title": "Required Missing Info",
+          "type": "array"
+        },
+        "must_not": {
+          "$ref": "#/$defs/MustNot"
+        }
+      },
+      "required": [
+        "intent",
+        "priority",
+        "queue",
+        "escalate"
+      ],
+      "title": "ExpectedBehavior",
+      "type": "object"
+    },
+    "InboundTicket": {
+      "additionalProperties": false,
+      "description": "What the triage system receives. Mirrors a ticketing-system webhook payload.",
+      "properties": {
+        "ticket_id": {
+          "pattern": "^[A-Z0-9-]+$",
+          "title": "Ticket Id",
+          "type": "string"
+        },
+        "received_at": {
+          "format": "date-time",
+          "title": "Received At",
+          "type": "string"
+        },
+        "channel": {
+          "enum": [
+            "email",
+            "portal",
+            "chat",
+            "phone_note"
+          ],
+          "title": "Channel",
+          "type": "string"
+        },
+        "from_name": {
+          "title": "From Name",
+          "type": "string"
+        },
+        "from_email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From Email"
+        },
+        "subject": {
+          "title": "Subject",
+          "type": "string"
+        },
+        "body": {
+          "minLength": 1,
+          "title": "Body",
+          "type": "string"
+        },
+        "customer_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "None when the sender could not be matched to an account.",
+          "title": "Customer Id"
+        },
+        "attachments": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Attachments",
+          "type": "array"
+        },
+        "synthetic": {
+          "default": true,
+          "description": "Always true in this repo: no production data is used.",
+          "title": "Synthetic",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ticket_id",
+        "received_at",
+        "channel",
+        "from_name",
+        "subject",
+        "body"
+      ],
+      "title": "InboundTicket",
+      "type": "object"
+    },
+    "MustNot": {
+      "additionalProperties": false,
+      "description": "Hard constraints. Any violation fails the case regardless of other fields.",
+      "properties": {
+        "priority_in": {
+          "items": {
+            "enum": [
+              "P1",
+              "P2",
+              "P3",
+              "P4"
+            ],
+            "type": "string"
+          },
+          "title": "Priority In",
+          "type": "array"
+        },
+        "queue_in": {
+          "items": {
+            "enum": [
+              "tier1_general",
+              "tier2_technical",
+              "billing",
+              "customer_success_retention",
+              "onboarding_data",
+              "product"
+            ],
+            "type": "string"
+          },
+          "title": "Queue In",
+          "type": "array"
+        },
+        "escalate_false": {
+          "default": false,
+          "title": "Escalate False",
+          "type": "boolean"
+        },
+        "phrases_in_summary": {
+          "description": "Case-insensitive substrings forbidden in summary/rationale.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Phrases In Summary",
+          "type": "array"
+        },
+        "phrases_in_action": {
+          "description": "Case-insensitive substrings forbidden in suggested_next_action.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Phrases In Action",
+          "type": "array"
+        }
+      },
+      "title": "MustNot",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "pattern": "^TC\\d{2}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "category": {
+      "enum": [
+        "representative",
+        "edge",
+        "failure"
+      ],
+      "title": "Category",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "risk_tested": {
+      "title": "Risk Tested",
+      "type": "string"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Tags",
+      "type": "array"
+    },
+    "ticket": {
+      "$ref": "#/$defs/InboundTicket"
+    },
+    "expected": {
+      "$ref": "#/$defs/ExpectedBehavior"
+    }
+  },
+  "required": [
+    "id",
+    "category",
+    "title",
+    "risk_tested",
+    "ticket",
+    "expected"
+  ],
+  "title": "TestCase",
+  "type": "object"
+}

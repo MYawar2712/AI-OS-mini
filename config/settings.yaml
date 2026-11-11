@@ -1,0 +1,28 @@
+# Runtime settings. Secrets are NEVER stored here — see .env.example.
+seed: 42
+reference_date: "2026-11-11"   # "today" for synthetic data (renewal windows etc.) so runs are reproducible
+
+paths:
+  test_cases: eval/test_cases.jsonl
+  results_dir: eval/results
+  customers: data/synthetic/customers.json
+  kb_articles: data/synthetic/kb_articles.json
+
+llm:
+  provider: anthropic
+  # Cheapest current Claude model, chosen because the project owner asked for extremely low cost (ADR-005).
+  model: claude-haiku-5-5
+  effort: low
+  max_tokens: 1024
+  timeout_seconds: 60
+
+# USD per 1M tokens. Configurable; used by eval/metrics.py for cost-per-ticket.
+# Source: Anthropic public pricing table as of 2026-11 (prompts <= 100K tokens).
+pricing_usd_per_mtok:
+  claude-haiku-5-5: { input: 0.10, output: 0.50 }
+  claude-sonnet-5-5: { input: 2.00, output: 10.00 }
+  claude-opus-5-5: { input: 4.00, output: 20.00 }
+  keyword_rules: { input: 0.0, output: 0.0 }
+
+# Labour-cost assumptions for the pain/cost model (deliberately low — demo project, see A-07).
+labour_cost_gbp_per_hour: { low: 12.0, base: 14.0, high: 17.0 }

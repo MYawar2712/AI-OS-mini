@@ -1,0 +1,12 @@
+# Pain-model inputs. EVERY value is an ASSUMPTION or ESTIMATE (not measured) — see docs/assumptions.md.
+# low = optimistic about today's process (less pain), high = pessimistic (more pain).
+team_tier1_reps: 3                       # A-02
+working_days_per_week: 5
+tickets_per_rep_per_day: { low: 35, base: 50, high: 65 }      # A-03
+triage_minutes_per_ticket: { low: 2.0, base: 3.0, high: 5.0 } # A-04 (read, look up account, classify, route, summarise; excludes resolution)
+misroute_rate: { low: 0.06, base: 0.12, high: 0.20 }          # A-05
+rework_minutes_per_misroute: { low: 8, base: 15, high: 25 }   # A-06 (both teams: bounce, re-read, re-route)
+priority_error_rate: { low: 0.08, base: 0.15, high: 0.25 }    # A-08
+ttfr_delay_hours_per_misroute: { low: 1.0, base: 3.0, high: 6.0 }  # A-09
+# Projected LLM usage per ticket for the Day 2+ pipeline (ESTIMATE, to be measured on Day 2).
+llm_tokens_per_ticket: { input: 2500, output: 400 }

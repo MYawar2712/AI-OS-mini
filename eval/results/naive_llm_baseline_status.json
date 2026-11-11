@@ -1,0 +1,6 @@
+{
+  "baseline": "naive_llm_baseline",
+  "status": "not_run",
+  "reason": "ANTHROPIC_API_KEY not set in .env",
+  "model": "claude-haiku-5-5"
+}
