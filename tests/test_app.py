@@ -1,4 +1,8 @@
-"""UI tests for the Streamlit review app (Streamlit AppTest, fake pipeline: no browser, no network)."""
+"""UI tests for the Triage Desk (Streamlit AppTest, fake pipeline: no browser, no network).
+
+AppTest cannot click dataframe rows (browser-only), so tests select a ticket the same way the
+inbox does internally: via st.session_state["selected_ticket"].
+"""
 import json
 from unittest import mock
 
@@ -40,58 +44,79 @@ def app(tmp_path, monkeypatch):
         yield AppTest.from_file(APP, default_timeout=30)
 
 
-def _button(at, key):
-    return next(b for b in at.button if b.key == key)
+def _triage(at, ticket_id="SYN-24102"):
+    at.session_state["selected_ticket"] = ticket_id
+    at.run()
+    at.button(key="triage").click().run()
+    assert not at.exception, at.exception
+    return at
 
 
-def test_loads_with_four_tabs_and_full_inbox(app):
+def test_inbox_loads_with_all_demo_tickets(app):
     at = app.run()
     assert not at.exception
-    assert len(at.tabs) == 4
-    assert len(at.radio[0].options) == 24  # 12 dev + 12 held-out demo tickets
+    assert len(at.dataframe[0].value) == 24  # 12 dev + 12 held-out synthetic tickets
+    assert at.button(key="triage")
 
 
 def test_triage_shows_card_with_escalation(app):
-    at = app.run()
-    _button(at, "triage").click().run()
-    assert not at.exception
-    assert any("Needs a lead" in e.value for e in at.error)
+    at = _triage(app.run())
+    assert any("Needs a lead" in str(e.proto) for e in at.error)
     assert {"accept", "edit", "reject"} <= {b.key for b in at.button}
 
 
 def test_accept_writes_outbox_and_audit(app, tmp_path):
-    at = app.run()
-    _button(at, "triage").click().run()
-    _button(at, "accept").click().run()
+    at = _triage(app.run())
+    at.button(key="accept").click().run()
     assert not at.exception
     assert (tmp_path / "ticketing_outbox.jsonl").exists() and (tmp_path / "audit.jsonl").exists()
-    assert any("Saved ticket" in s.value for s in at.success)
+    assert len(at.dataframe[0].value) == 23  # reviewed ticket leaves the inbox
 
 
 def test_reject_writes_audit_only(app, tmp_path):
-    at = app.run()
-    _button(at, "triage").click().run()
-    _button(at, "reject").click().run()
-    next(t for t in at.text_input if t.label.startswith("Why? (e.g.")).input("needs context")
-    next(b for b in at.button if "Confirm reject" in b.label).click().run()
+    at = _triage(app.run())
+    at.button(key="reject").click().run()
+    next(t for t in at.text_input if t.label == "Why are you rejecting it?").input("needs context")
+    next(b for b in at.button if b.label == "Confirm reject").click().run()
     assert not at.exception
     assert (tmp_path / "audit.jsonl").exists() and not (tmp_path / "ticketing_outbox.jsonl").exists()
+    assert json.loads((tmp_path / "audit.jsonl").read_text().splitlines()[-1])["review"]["comment"] == "needs context"
 
 
 def test_edit_priority_is_saved(app, tmp_path):
-    at = app.run()
-    _button(at, "triage").click().run()
-    _button(at, "edit").click().run()
+    at = _triage(app.run())
+    at.button(key="edit").click().run()
     # Form widgets only apply on submit: set the value, then submit in the same run.
-    next(s for s in at.selectbox if s.label == "Priority").set_value("P2")
-    next(b for b in at.button if "Save my edit" in b.label).click().run()
+    at.get_by_key("edit_priority").set_value("P2")
+    next(b for b in at.button if b.label == "Save my edit").click().run()
     assert not at.exception
     audit = json.loads((tmp_path / "audit.jsonl").read_text().splitlines()[-1])
     assert audit["review"]["decision"] == "edited" and audit["final"]["priority"] == "P2"
 
 
-def test_reviewed_ticket_leaves_the_inbox(app):
+@pytest.mark.parametrize("page", ["app_pages/new_ticket.py", "app_pages/activity.py", "app_pages/help.py"])
+def test_other_pages_render(app, page):
     at = app.run()
-    _button(at, "triage").click().run()
-    _button(at, "accept").click().run()
-    assert len(at.radio[0].options) == 23
+    at.switch_page(page).run()
+    assert not at.exception
+
+
+def test_new_ticket_is_added_and_selected(app):
+    at = app.run()
+    at.switch_page("app_pages/new_ticket.py").run()
+    next(t for t in at.text_input if t.label == "Subject").input("Board empty")
+    at.text_area[0].input("Our scheduling board shows nothing since 9am for all planners.")
+    next(b for b in at.button if b.label == "Add to inbox").click().run()
+    assert not at.exception
+    assert len(at.session_state["new_tickets"]) == 1
+    assert at.session_state["selected_ticket"].startswith("SYN-NEW-")
+    at.switch_page("app_pages/inbox.py").run()
+    assert len(at.dataframe[0].value) == 25
+
+
+def test_activity_shows_metrics_after_a_decision(app):
+    at = _triage(app.run())
+    at.button(key="accept").click().run()
+    at.switch_page("app_pages/activity.py").run()
+    assert not at.exception
+    assert at.metric[0].value == "1"

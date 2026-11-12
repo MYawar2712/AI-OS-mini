@@ -41,7 +41,9 @@ RULE = {
     "R-ACT": "Suggested step replaced: refunds/credits/discounts need someone with authority",
     "FALLBACK": "Automatic triage failed, so this ticket goes to manual triage",
 }
-CHANNEL = {"email": "📧 Email", "portal": "🌐 Portal", "chat": "💬 Chat", "phone_note": "📞 Phone note"}
+CHANNEL_TEXT = {"email": "Email", "portal": "Portal", "chat": "Chat", "phone_note": "Phone note"}
+CHANNEL_ICON = {"email": ":material/mail:", "portal": ":material/language:", "chat": ":material/chat:",
+                "phone_note": ":material/call:"}
 
 
 def missing(code: str) -> str:

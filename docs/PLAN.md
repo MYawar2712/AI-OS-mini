@@ -70,7 +70,7 @@ data/synthetic/ ✅ customers, KB          data/runs/ (git-ignored) audit + outb
 docs/              PLAN.md ✅  day1/ ✅  day2/ ✅  day3/ ❌  day4/ ❌  day5/ ❌
                    decisions.md ✅  assumptions.md ✅
                    README (user) ✅→🟡  RUNBOOK.md ❌  CASE_STUDY.md ❌  AI_COLLABORATION.md ❌👤
-tests/ ✅          168 tests (incl. 6 UI tests), no network needed
+tests/ ✅          172 tests (incl. 10 UI tests), no network needed
 ```
 
 ### 1.3 Contracts (stable; change only with an ADR)
@@ -88,7 +88,7 @@ tests/ ✅          168 tests (incl. 6 UI tests), no network needed
 | 4 Evaluate & harden | ❌ | n/a | 👤 proxy-user feedback |
 | 5 Handoff & present | ❌ | n/a | 👤 record the 5-min video; 👤 AI collaboration note decision |
 
-**Built ahead of schedule (2026-11-12, owner request; Day 3 plan left unchanged):** Streamlit review UI `app/review.py` ("Triage Desk"): inbox of synthetic tickets, add-a-ticket form, plain-language triage card, "Why?" panel, Accept / Edit / Reject → outbox + audit, Activity tab, Help tab. 6 UI tests (`tests/test_app.py`), verified with the real model on TC10. Relevant to tasks 3.6 / 5.5. Day 3 integrations will plug into it.
+**Built ahead of schedule (2026-11-12, owner request; Day 3 plan left unchanged):** Streamlit review UI `app/review.py` ("Triage Desk"): inbox of synthetic tickets, add-a-ticket form, plain-language triage card, "Why?" panel, Accept / Edit / Reject → outbox + audit, Activity tab, Help tab. 6 UI tests (`tests/test_app.py`), verified with the real model on TC10. Relevant to tasks 3.6 / 5.5. Day 3 integrations will plug into it. **Redesigned the same day** with Streamlit's official bundled agent skill (ADR-024): multipage nav (Inbox / New ticket / Activity / Help), theme config, selectable inbox table, native badges; 10 UI tests; verified via the agent API.
 
 Last pushed commit: `d8e0bde` (Day 1). Day 2 is uncommitted until the owner runs the commit command.
 Owner-wide pending: 👤 `qwen3.8-27b` price per token (cost metric) · 👤 rotate the Alibaba API key.
