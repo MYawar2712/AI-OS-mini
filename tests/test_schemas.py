@@ -15,9 +15,20 @@ def test_exactly_twelve_cases_with_required_mix():
     assert (cats.count("representative"), cats.count("edge"), cats.count("failure")) == (5, 4, 3)
 
 
+HOLDOUT = load_test_cases(ROOT / "eval" / "test_cases_holdout.jsonl")
+
+
 def test_ids_unique():
     assert len({c.id for c in CASES}) == 12
     assert len({c.ticket.ticket_id for c in CASES}) == 12
+
+
+def test_holdout_set_mix_and_ids_disjoint_from_dev():
+    cats = [c.category for c in HOLDOUT]
+    assert len(HOLDOUT) == 12 and (cats.count("representative"), cats.count("edge"), cats.count("failure")) == (5, 4, 3)
+    all_ids = [c.id for c in CASES + HOLDOUT] + [c.ticket.ticket_id for c in CASES + HOLDOUT]
+    assert len(all_ids) == len(set(all_ids))
+    assert all(c.ticket.synthetic and "holdout" in c.tags for c in HOLDOUT)
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.id)

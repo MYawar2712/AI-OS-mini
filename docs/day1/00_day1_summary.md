@@ -1,7 +1,7 @@
 # Day 1 summary: Discover, Map, Baseline
 
 **Project:** AI-assisted Help Desk Triage for a field-service SaaS support team (HVAC, plumbing, electrical, facilities customers).
-**LLM provider:** Alibaba Cloud Model Studio (International), model **`qwen3.8-27b`**, selected from 3 candidates (ADR-013, ADR-016): [model_comparison.md](../../eval/results/model_comparison.md).
+**LLM provider:** Alibaba Cloud Model Studio (International), model **`qwen3.8-27b`**, selected from 4 candidates (ADR-013, ADR-016): [model_comparison.md](../../eval/results/model_comparison.md).
 **Data:** 100% **synthetic**. No production tickets were used. Numbers are labelled **MEASURED-SYN** (measured on our 12 synthetic cases), **ESTIMATE**, or **ASSUMED**.
 
 ## The problem in one paragraph (for a support lead)
@@ -32,8 +32,8 @@ Every ticket has to be read, matched to a customer, categorised, prioritised, ro
 | Median latency per ticket | < 1 ms | **28 s** (range 15–106 s) | < 5 s |
 | Tokens / cost per ticket | 0 / $0 | ≈ 262 in / 958 out / **price not yet confirmed** | < $0.002 |
 
-**Three LLMs were compared** on the same 12 cases with the same prompt and scorer: `qwen3.8-27b`, `deepseek-v4.1-flash` and `deepseek-v4.1-flash-1017`. Full table: [`eval/results/model_comparison.md`](../../eval/results/model_comparison.md).
-- **Selection:** a rule fixed *before* the last run picked **`qwen3.8-27b`**. Safety ties across all three, and Qwen then wins on case pass rate (6/12 vs 5/12 and 4/12).
+**Four LLMs were compared** on the same 12 cases with the same prompt and scorer: `qwen3.8-27b`, `deepseek-v4.1-flash`, `qwen3.8-omni-flash` and `deepseek-v4.1-flash-1017`. Full table: [`eval/results/model_comparison.md`](../../eval/results/model_comparison.md).
+- **Selection:** a rule fixed *before* the last run picked **`qwen3.8-27b`**. Safety ties across all four, and Qwen then wins on case pass rate (6/12 vs 5/12, 5/12 and 4/12). `qwen3.8-omni-flash` (13 s median) ranked 3rd: it tied `deepseek-v4.1-flash` on pass rate but had the lowest priority accuracy (33%).
 - **Caveat:** that is a **one-case margin from a single run**, i.e. noise-level. Qwen is also **~3.5× slower** (28 s median vs ~8 s for DeepSeek) and routes slightly worse (75% vs 83%).
 - **Revisit on Day 2:** cut Qwen's latency (e.g. turn off hidden reasoning, cap the output). If it can't get under the 5 s target, `deepseek-v4.1-flash` is the fallback: same safety results, 5/12, and 3.5× faster.
 
@@ -55,7 +55,7 @@ The value of the AI OS is the **difference** between the two ways of working, no
 **What the keyword baseline got wrong:** admin lockout routed as a mobile-app issue (TC04). Second issue not escalated in the multi-intent ticket (TC06). The vague ticket was guessed at rather than flagged (TC07). The churn threat was missed and routed to Tier-1 (TC08). The on-site no-show was under-prioritised (TC09). It obeyed nothing in the injection, but also **didn't flag it** (TC10). Card number copied into the summary (TC11).
 Full detail: [`eval/results/baseline_comparison.md`](../../eval/results/baseline_comparison.md).
 
-**What the naive LLMs got wrong (the mirror image, same pattern in all 3 models):** they **over-react**. They push non-outages to P1 (e.g. TC04, TC05, TC06). They escalate routine tickets (TC04, TC05, TC09). They let a "won't renew" threat stay a bug/scheduling ticket instead of making churn primary (TC08). None flagged the vague "its broken again" ticket for a human (TC07). Answers are slow (8–28 s median depending on the model), because ~1,000 output tokens per ticket are mostly hidden reasoning.
+**What the naive LLMs got wrong (the mirror image, same pattern in all 4 models):** they **over-react**. They push non-outages to P1 (e.g. TC04, TC05, TC06). They escalate routine tickets (TC04, TC05, TC09). They let a "won't renew" threat stay a bug/scheduling ticket instead of making churn primary (TC08). None flagged the vague "its broken again" ticket for a human (TC07). Answers are slow (8–28 s median depending on the model), because ~1,000 output tokens per ticket are mostly hidden reasoning.
 
 **Takeaway:** rules and a bare LLM fail in opposite directions. Rules under-react: they miss escalations and are blind to injection. A bare LLM over-reacts: priority inflation and too many escalations mean 75% of tickets still need a human. That is the case for v1's design: **the LLM reads and drafts, deterministic rules set the priority floors and the escalation logic.**
 

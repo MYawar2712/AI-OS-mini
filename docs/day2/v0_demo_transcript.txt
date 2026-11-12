@@ -1,0 +1,36 @@
+$ python -m scripts.triage --case TC02 --reviewer demo_reviewer   (reviewer types: a)
+
+========================================================================
+ TICKET SYN-24102  |  URGENT engineers app not syncing  |  from Service desk (phone note)  (SYNTHETIC)
+========================================================================
+ Category      : mobile_app_sync
+ Priority      : P1
+ Send to team  : tier2_technical
+ Needs a lead? : YES  ->  p1_incident
+ Ask customer  : device_and_app_version
+ Summary       : All 8 field engineers are unable to sync today's jobs in the mobile app after a version update last night, with the app stuck on 'Syncing...' since 7 AM. Engineers are waiting in vans for visits that were due at 7:30.
+ Next step     : Escalate immediately to engineering to investigate potential backend sync issues related to the recent mobile app version update.
+ Confidence    : 100%
+------------------------------------------------------------------------
+ How decided   : rules fired R-P1, R-Q, R-E:p1_incident, R-MI:-account_id
+ Safety checks : redacted=none  injection=none  customer_found=True
+ Run           : ok, 10.5 s, model qwen3.8-27b, 1061 in / 327 out tokens
+========================================================================
+Review: [a]ccept  [e]dit  [r]eject (human triage) > 
+Written to ticketing outbox (data/runs/ticketing_outbox.jsonl):
+{
+  "intent": "mobile_app_sync",
+  "secondary_intent": "",
+  "priority": "P1",
+  "queue": "tier2_technical",
+  "escalate": "true",
+  "escalation_reasons": "p1_incident",
+  "missing_info": "device_and_app_version"
+}
+Internal note:
+[Triage v0, reviewed by demo_reviewer: accepted]
+Summary: All 8 field engineers are unable to sync today's jobs in the mobile app after a version update last night, with the app stuck on 'Syncing...' since 7 AM. Engineers are waiting in vans for visits that were due at 7:30.
+Next action: Escalate immediately to engineering to investigate potential backend sync issues related to the recent mobile app version update.
+ESCALATED: p1_incident
+Ask customer for: device_and_app_version
+Audit record appended: data/runs/audit.jsonl

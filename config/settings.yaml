@@ -22,6 +22,7 @@ llm:
 # null = price not yet confirmed -> cost is reported as "n/a" rather than a made-up number.
 # TODO(owner): copy qwen3.8-27b input/output prices from the Model Studio console.
 pricing_usd_per_mtok:
+  qwen3.8-omni-flash: { input: null, output: null }
   qwen3.8-27b: { input: null, output: null }
   deepseek-v4.1-flash-1017: { input: null, output: null }
   deepseek-v4.1-flash: { input: null, output: null }
@@ -32,3 +33,10 @@ pricing_usd_per_mtok:
 
 # Labour-cost assumptions for the pain/cost model (deliberately low — demo project, see A-07).
 labour_cost_gbp_per_hour: { low: 12.0, base: 14.0, high: 17.0 }
+
+# Day 2 triage pipeline (src/pipeline). The naive baseline keeps the llm defaults above.
+pipeline:
+  thinking: false        # hidden reasoning off: 28 s -> ~1-3 s per ticket (ADR-018); facts are simple reading
+  max_tokens: 700        # JSON facts only
+  llm_retries: 1         # one retry with the validation error, then fallback to human triage
+  runs_dir: data/runs    # audit log + ticketing outbox (git-ignored)

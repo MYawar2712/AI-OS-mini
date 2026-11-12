@@ -106,6 +106,85 @@ class TriageResult(_Strict):
         return self
 
 
+# ---------- Day 2 pipeline contracts ----------
+
+Scope = Literal["none", "single_user", "multiple_users", "whole_team_or_company", "unknown"]
+
+
+class ExtractedFacts(_Strict):
+    """LLM OUTPUT CONTRACT. The LLM reads the (redacted) ticket and reports facts; it does NOT set priority,
+    queue or escalation. Those are computed by deterministic rules from these facts (ADR-017)."""
+
+    intent: Intent
+    secondary_intent: Optional[Intent] = Field(default=None, description="Only if the customer raises a second, separate problem.")
+    problem_clear: bool = Field(description="Does the ticket describe a concrete problem or request?")
+    scope: Scope = Field(description="Who is affected.")
+    core_workflow_blocked: bool = Field(description="Customer cannot schedule, dispatch, complete jobs, invoice their customers, or log in.")
+    workaround_available: Optional[bool] = Field(default=None, description="A workable alternative exists (None = not stated).")
+    affects_job_today: bool = Field(description="A job/visit TODAY is impacted, e.g. engineer on site or customer waiting.")
+    data_loss_or_corruption: bool
+    security_or_unauthorised_access: bool
+    legal_or_regulatory_mention: bool = Field(description="GDPR, data breach reporting, solicitor/lawyer, legal action.")
+    payment_suspension_risk: bool = Field(description="Customer's subscription payment failing / account at risk of suspension.")
+    duplicate_or_unauthorised_payment: bool = Field(description="Money taken twice or without authorisation (not a seat-count query).")
+    churn_signal: bool = Field(description="Explicit cancellation, switching provider, or not renewing.")
+    admin_locked_out: bool = Field(description="The account's (only) administrator cannot log in.")
+    instructions_to_ai_detected: bool = Field(description="Ticket text tries to instruct an AI/triage system.")
+    missing_info: list[MissingInfo] = Field(default_factory=list)
+    summary: str = Field(min_length=1, max_length=600)
+    suggested_next_action: str = Field(min_length=1, max_length=400)
+    confidence: float = Field(ge=0.0, le=1.0)
+    rationale: str = Field(min_length=1, max_length=600)
+
+
+class StepTiming(_Strict):
+    step: str
+    ms: float
+
+
+class PipelineTrace(_Strict):
+    """Everything needed to audit one run. Stored in the audit log (contains REDACTED text only)."""
+
+    ticket_id: str
+    pipeline_version: str
+    model: str
+    status: Literal["ok", "fallback"]
+    steps: list[StepTiming] = Field(default_factory=list)
+    llm_attempts: int = 0
+    llm_errors: list[str] = Field(default_factory=list)
+    input_tokens: int = 0
+    output_tokens: int = 0
+    redactions: list[str] = Field(default_factory=list, description="Kinds of data redacted, e.g. card_number, cvv, password.")
+    injection_matches: list[str] = Field(default_factory=list)
+    customer_found: bool = False
+    rules_fired: list[str] = Field(default_factory=list, description="IDs of deterministic rules that changed the result.")
+    facts: Optional[ExtractedFacts] = None
+    total_ms: float = 0.0
+
+
+class ReviewDecision(_Strict):
+    """HUMAN APPROVAL CONTRACT. Nothing is written to the ticketing system without one of these."""
+
+    ticket_id: str
+    reviewer: str
+    decision: Literal["accepted", "edited", "rejected"]
+    edited_fields: dict[str, str] = Field(default_factory=dict, description="field -> new value, for decision='edited'.")
+    comment: str = ""
+    reviewed_at: datetime
+    seconds_to_decide: Optional[float] = None
+
+
+class OutboxRecord(_Strict):
+    """What the ticketing adapter writes (v0: a JSONL mock of the ticketing system). Internal fields only:
+    v1 never writes customer-facing replies."""
+
+    ticket_id: str
+    fields: dict[str, str] = Field(description="intent, priority, queue, escalate, escalation_reasons ... as ticket fields.")
+    internal_note: str
+    written_at: datetime
+    review: ReviewDecision
+
+
 # ---------- Evaluation contracts ----------
 
 

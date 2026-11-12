@@ -64,7 +64,8 @@ priorities:
     definition: >
       Core workflow impaired for one user or with a painful workaround; time-sensitive operational
       problem affecting a job TODAY (engineer no-show, customer waiting on site); admin user locked out;
-      payment failure that threatens suspension; incorrect/duplicate charge; explicit churn/cancellation threat.
+      payment failure that threatens suspension; duplicate or unauthorised payment taken (seat-count/invoice
+      queries are P3); explicit churn/cancellation threat.
   P3:
     rank: 3
     target_first_response_minutes: 480

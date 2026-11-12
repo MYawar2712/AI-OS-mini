@@ -9,7 +9,7 @@ from src.schemas import PRIORITY_RANK, load_test_cases
 from src.taxonomy import ROOT, load_taxonomy
 
 TAX = load_taxonomy()
-CASES = load_test_cases(ROOT / "eval" / "test_cases.jsonl")
+CASES = load_test_cases(ROOT / "eval" / "test_cases.jsonl") + load_test_cases(ROOT / "eval" / "test_cases_holdout.jsonl")
 
 
 @pytest.mark.parametrize("literal,key", [

@@ -47,8 +47,12 @@ def is_configured() -> bool:
     return bool(key) and "REPLACE_ME" not in key
 
 
-def call_llm(prompt: str, system: str | None = None) -> LLMResponse:
+def call_llm(prompt: str, system: str | None = None, *, json_mode: bool = False, thinking: bool | None = None,
+             max_tokens: int | None = None) -> LLMResponse:
+    """json_mode: ask for a JSON object. thinking: None = provider default, False = disable hidden reasoning
+    (DashScope `enable_thinking`). The naive baseline uses the defaults; the pipeline sets all three."""
     cfg = _cfg()
+    max_tokens = max_tokens or cfg["max_tokens"]
     if not is_configured():
         raise LLMNotConfigured(f"{api_key_env_var()} not set in .env")
     key = os.environ[api_key_env_var()]
@@ -60,7 +64,12 @@ def call_llm(prompt: str, system: str | None = None) -> LLMResponse:
         client = openai.OpenAI(api_key=key, base_url=cfg["base_url"], timeout=cfg["timeout_seconds"], max_retries=2)
         messages = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": prompt}]
         try:
-            r = client.chat.completions.create(model=cfg["model"], max_tokens=cfg["max_tokens"], messages=messages)
+            kwargs = {}
+            if json_mode:
+                kwargs["response_format"] = {"type": "json_object"}
+            if thinking is not None:
+                kwargs["extra_body"] = {"enable_thinking": thinking}
+            r = client.chat.completions.create(model=cfg["model"], max_tokens=max_tokens, messages=messages, **kwargs)
         except openai.APIError as e:
             raise LLMCallError(f"{type(e).__name__}: {e}") from e
         text = r.choices[0].message.content or ""
@@ -72,7 +81,7 @@ def call_llm(prompt: str, system: str | None = None) -> LLMResponse:
         client = anthropic.Anthropic(api_key=key, timeout=cfg["timeout_seconds"])
         kwargs = {"system": system} if system else {}
         try:
-            r = client.messages.create(model=cfg["model"], max_tokens=cfg["max_tokens"],
+            r = client.messages.create(model=cfg["model"], max_tokens=max_tokens,
                                        messages=[{"role": "user", "content": prompt}], **kwargs)
         except anthropic.APIError as e:
             raise LLMCallError(f"{type(e).__name__}: {e}") from e
