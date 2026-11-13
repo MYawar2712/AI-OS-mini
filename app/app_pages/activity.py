@@ -1,7 +1,8 @@
-import streamlit as st
+﻿import streamlit as st
 
 from app import labels as L
 from app import ui
+from src import adapters
 
 rows = ui.audit_rows()
 if not rows:
@@ -38,3 +39,16 @@ st.dataframe(
     },
     alt="Table of every triage decision, newest first",
 )
+
+st.subheader("Escalation notices sent to leads", anchor=False)
+notifier = adapters.get_notifier()
+sent = notifier.recent()
+if not sent:
+    st.caption("None yet. A notice is sent when you approve a ticket that needs a lead.")
+else:
+    st.dataframe([{"Sent": s["sent_at"][:16].replace("T", " "), "Ticket": s["ticket_id"], "Priority": s["priority"],
+                   "Team": L.QUEUE.get(s["queue"], s["queue"]), "Why": ", ".join(L.REASON.get(r, r) for r in s["reasons"]),
+                   "Approved by": s["approved_by"]} for s in sent], hide_index=True,
+                 alt="Escalation notices, newest first")
+    st.caption(f"Source: `{ui.path_label(notifier.path)}`"
+               + (" · also posted to the webhook" if notifier.webhook_url else ""))

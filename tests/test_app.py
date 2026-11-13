@@ -1,7 +1,8 @@
-"""UI tests for the Triage Desk (Streamlit AppTest, fake pipeline: no browser, no network).
+﻿"""UI tests for the Triage Desk (Streamlit AppTest, fake pipeline: no browser, no network).
 
 AppTest cannot click dataframe rows (browser-only), so tests select a ticket the same way the
-inbox does internally: via st.session_state["selected_ticket"].
+inbox does internally: via st.session_state["selected_ticket"]. Each test gets a fresh copy of the sample ticket
+queue (tests/conftest.py).
 """
 import json
 from unittest import mock
@@ -108,7 +109,9 @@ def test_new_ticket_is_added_and_selected(app):
     at.text_area[0].input("Our scheduling board shows nothing since 9am for all planners.")
     next(b for b in at.button if b.label == "Add to inbox").click().run()
     assert not at.exception
-    assert len(at.session_state["new_tickets"]) == 1
+    from src import adapters
+    snap = adapters.get_queue().read()
+    assert len(snap.tickets) == 25 and snap.status[at.session_state["selected_ticket"]] == "new"
     assert at.session_state["selected_ticket"].startswith("SYN-NEW-")
     at.switch_page("app_pages/inbox.py").run()
     assert len(at.dataframe[0].value) == 25
@@ -120,3 +123,22 @@ def test_activity_shows_metrics_after_a_decision(app):
     at.switch_page("app_pages/activity.py").run()
     assert not at.exception
     assert at.metric[0].value == "1"
+
+
+def test_accept_writes_back_to_queue_and_notifies(app, isolated_data):
+    from src import adapters
+    at = _triage(app.run())
+    at.button(key="accept").click().run()
+    snap = adapters.get_queue().read()
+    row = snap.rows["SYN-24102"]
+    assert snap.status["SYN-24102"] == "triaged" and row["priority"] == "P1" and row["escalate"] == "yes"
+    assert "Assisted triage, reviewed by" in row["internal_note"]
+    assert adapters.get_notifier().recent()[0]["ticket_id"] == "SYN-24102"  # fake facts -> P1 escalation
+
+
+def test_process_new_tickets_button_prefills_all(app):
+    at = app.run()
+    at.button(key="process").click().run()
+    assert not at.exception
+    assert any("Processed 24 new ticket(s)" in str(e.proto) for e in at.success)
+    assert at.button(key="accept")  # first ticket now shows a card ready for review, no extra click

@@ -3,43 +3,91 @@ import streamlit as st
 import src.pipeline.run as pipeline_run
 from app import labels as L
 from app import ui
+from src import adapters
+from src.pipeline import batch, proposals
 
+# ---------------------------------------------------------------- confirmation of the last decision
 done = st.session_state.done
 if done:
     st.session_state.done = None
+    where = f"`{done['queue_file']}`" if done["written_back"] else "the outbox log (ticket not in the queue file)"
     if done["fields"]:
         st.toast(f"Saved {done['ticket_id']} ({done['decision']})", icon=":material/save:")
-        with st.expander(f"Written to ticket {done['ticket_id']} ({done['decision']})", icon=":material/task_alt:",
-                         expanded=True):
+        with st.expander(f"Written to ticket {done['ticket_id']} in {where} ({done['decision']})",
+                         icon=":material/task_alt:", expanded=True):
+            if done["notified"]:
+                st.markdown(f":material/notification_important: Escalation notice sent to: {', '.join(done['notified'])}")
             st.json(done["fields"])
             st.text(done["note"])
     else:
-        st.info("Nothing was written; it stays for manual triage.", title=f"Ticket {done['ticket_id']} rejected",
-                icon=":material/assignment_return:")
+        st.info(f"No triage fields were written; the ticket is marked **Manual triage** in {where}.",
+                title=f"Ticket {done['ticket_id']} rejected", icon=":material/assignment_return:")
+    for w in done["warnings"]:
+        st.warning(w, title="Escalation notice partly delivered", icon=":material/wifi_off:")
 
-tickets = ui.all_tickets()
-status = ui.reviewed_ids()
-waiting = [t for t in tickets if t.ticket_id not in status]
+report = st.session_state.pop("batch_report", None)
+if report:
+    msg = (f"{len(report.ready)} ready for review ({len(report.escalate)} need a lead), "
+           f"{len(report.fallback)} sent to manual triage, in {report.seconds:.0f} s.")
+    (st.warning if report.failed else st.success)(msg, title=f"Processed {report.found} new ticket(s)",
+                                                  icon=":material/bolt:")
+    for tid, err in report.failed.items():
+        st.error(f"{err} It stays **New**; press the button again to retry.", title=f"{tid} not processed",
+                 icon=":material/error:")
+
+# ---------------------------------------------------------------- queue
+try:
+    snap = ui.queue_snapshot()
+except Exception as e:  # noqa: BLE001 - shown in plain language
+    ui.show_error(e)
+    st.stop()
+if snap.errors:
+    st.warning("\n".join(f"- {e}" for e in snap.errors[:5]),
+               title=f"{len(snap.errors)} row(s) in the ticket file could not be read and were skipped",
+               icon=":material/rule:")
+
+suggested = proposals.load_all()
+status = {tid: ui.STATUS_TEXT[s] for tid, s in snap.status.items()}
+new = snap.with_status("new")
+waiting = snap.with_status("new", "ready_for_review")
 
 with st.container(horizontal=True, vertical_alignment="center"):
-    st.badge(f"{len(waiting)} waiting", icon=":material/hourglass_top:", color="blue")
-    st.badge(f"{len(status)} reviewed", icon=":material/task_alt:", color="gray")
-    show_done = st.toggle("Show reviewed tickets", key="show_done")
+    st.badge(f"{len(new)} new", icon=":material/fiber_new:", color="blue")
+    st.badge(f"{len(waiting) - len(new)} ready for review", icon=":material/fact_check:", color="violet")
+    st.badge(f"{len(snap.tickets) - len(waiting)} done", icon=":material/task_alt:", color="gray")
+    show_done = st.toggle("Show done tickets", key="show_done")
+    if st.button(f"Process new tickets ({len(new)})", key="process", icon=":material/bolt:", disabled=not new,
+                 help="The assistant pre-fills the triage for every New ticket. Nothing is written to a ticket until "
+                      "you approve it."):
+        with st.status(f"Triaging {len(new)} ticket(s)…", expanded=True) as box:
+            bar = st.progress(0.0)
+            report = batch.process_new(on_progress=lambda d, n, tid: bar.progress(d / n, text=f"{d}/{n} · {tid}"))
+            box.update(label="Done", state="complete")
+        st.session_state.batch_report = report
+        st.rerun()
 
-visible = tickets if show_done else waiting
+visible = snap.tickets if show_done else waiting
 if not visible:
-    st.info("Turn on **Show reviewed tickets**, or add one on the **New ticket** page.", title="Inbox is empty",
+    st.info("Turn on **Show done tickets**, or add one on the **New ticket** page.", title="Nothing waiting",
             icon=":material/inbox:")
     st.stop()
 
+visible = sorted(visible, key=lambda t: t.received_at)
 ids = [t.ticket_id for t in visible]
 if st.session_state.selected_ticket not in ids:
     st.session_state.selected_ticket = ids[0]
 
+
+def _suggestion(tid: str) -> str:
+    if tid not in suggested or snap.status[tid] != "ready_for_review":
+        return ""
+    r = suggested[tid][0]
+    return f"{r.priority}{' · lead' if r.escalate else ''}"
+
+
 rows = [{"Subject": t.subject, "From": t.from_name, "Customer": ui.customer_name(t.customer_id),
          "Channel": L.CHANNEL_TEXT[t.channel], "Received": t.received_at.replace(tzinfo=None),
-         "Status": {"accepted": "Accepted", "edited": "Edited", "rejected": "Rejected"}.get(status.get(t.ticket_id), "Waiting")}
-        for t in visible]
+         "Suggested": _suggestion(t.ticket_id), "Status": status[t.ticket_id]} for t in visible]
 
 list_col, detail_col = st.columns([2, 3], gap="large")
 with list_col:
@@ -48,34 +96,42 @@ with list_col:
         column_config={
             "Subject": st.column_config.TextColumn(width="medium", pinned=True),
             "Received": st.column_config.DatetimeColumn(format="D MMM, HH:mm"),
-            "Status": st.column_config.MultiselectColumn(options=["Waiting", "Accepted", "Edited", "Rejected"],
-                                                         color=["#3B82F6", "#22C55E", "#F97316", "#EF4444"]),
+            "Suggested": st.column_config.TextColumn(help="Priority pre-filled by the assistant; 'lead' = needs a lead"),
+            "Status": st.column_config.MultiselectColumn(options=list(ui.STATUS_COLOR),
+                                                         color=list(ui.STATUS_COLOR.values())),
         },
-        alt="Inbox of support tickets waiting for triage",
+        alt="Ticket queue: tickets waiting for triage",
     )
     if event.selection.rows:
         st.session_state.selected_ticket = ids[event.selection.rows[0]]
-    st.caption("Click a row to open the ticket.")
+    st.caption(f"Click a row to open the ticket. Source: `{ui.path_label(adapters.get_queue().path)}`")
 
 t = next(x for x in visible if x.ticket_id == st.session_state.selected_ticket)
 with detail_col:
     ui.show_ticket(t)
-    cached = st.session_state.result
-    if cached and cached[0] == t.ticket_id:
-        _, res, trace = cached
+    s = snap.status[t.ticket_id]
+    proposal = suggested.get(t.ticket_id) if s == "ready_for_review" or st.session_state.retriage == t.ticket_id else None
+    if proposal:
+        res, trace = proposal
         ui.show_card(res, trace)
         ui.review_panel(t, res, trace)
     else:
-        if t.ticket_id in status:
-            st.caption(f"Already reviewed ({status[t.ticket_id]}). You can triage it again if needed.")
-        if st.button("Triage this ticket", key="triage", type="primary", icon=":material/manage_search:"):
-            with st.spinner("Reading the ticket and applying the rules (about 5–10 seconds)…"):
+        if s in ("triaged", "manual_triage"):
+            row = snap.rows[t.ticket_id]
+            st.info(f"{status[t.ticket_id]} by {row['triaged_by'] or 'unknown'} at {row['triaged_at'][:16].replace('T', ' ')}."
+                    + (f" Priority {row['priority']}, team {L.QUEUE.get(row['queue'], row['queue'])}." if row["priority"] else ""),
+                    title="Already done", icon=":material/task_alt:")
+        if st.button("Triage this ticket" if s == "new" else "Triage it again", key="triage", type="primary",
+                     icon=":material/manage_search:"):
+            with st.spinner("Reading the ticket and applying the rules (a few seconds)…"):
                 try:
                     res, trace = pipeline_run.triage(t)
-                except Exception as e:
-                    st.error(f"{e}. Nothing was written. Try again, or triage this ticket manually.",
-                             title="Triage could not finish", icon=":material/error:")
+                    proposals.save(res, trace)
+                    if s == "new":
+                        adapters.get_queue().set_status(t.ticket_id, "ready_for_review")
+                except Exception as e:  # noqa: BLE001
+                    ui.show_error(e)
                     st.stop()
-            st.session_state.result = (t.ticket_id, res, trace)
+            st.session_state.retriage = t.ticket_id
             st.session_state.mode = None
             st.rerun()

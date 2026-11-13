@@ -1,4 +1,4 @@
-"""Input/output contracts for the Help Desk Triage Agent.
+﻿"""Input/output contracts for the Help Desk Triage Agent.
 
 Enums are hard-coded as Literals (so they appear in the exported JSON Schema and IDEs),
 and tests/test_taxonomy_consistency.py asserts they match config/taxonomy.yaml exactly.
@@ -134,7 +134,8 @@ class ExtractedFacts(_Strict):
     summary: str = Field(min_length=1, max_length=600)
     suggested_next_action: str = Field(min_length=1, max_length=400)
     confidence: float = Field(ge=0.0, le=1.0)
-    rationale: str = Field(min_length=1, max_length=600)
+    rationale: str = Field(default="", max_length=600,
+                           description="Optional since extract-v2 (dropped from the prompt for latency, ADR-026).")
 
 
 class StepTiming(_Strict):
@@ -146,6 +147,7 @@ class PipelineTrace(_Strict):
     """Everything needed to audit one run. Stored in the audit log (contains REDACTED text only)."""
 
     ticket_id: str
+    run_id: Optional[str] = Field(default=None, description="Joins this trace to the structured log lines.")
     pipeline_version: str
     model: str
     status: Literal["ok", "fallback"]

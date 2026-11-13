@@ -1,10 +1,12 @@
-import streamlit as st
+﻿import streamlit as st
 
 st.markdown("""
-1. Open the **Inbox**, click a ticket, then **Triage this ticket**.
-2. Read the card. **A red box means a lead must look before anyone acts.**
+1. Open the **Inbox** and press **Process new tickets**. The assistant pre-fills a triage for every **New** ticket
+   (a few seconds each). Nothing is written to any ticket yet.
+2. Click a ticket marked **Ready for review** and read the card. **A red box means a lead must look before anyone acts.**
 3. Choose **Accept**, **Edit** (change category, priority, team or escalation) or **Reject** (you'll triage it yourself).
-4. Only then is the triage written to the ticket. Your decision is logged under **Activity**.
+4. Only then is the triage written back to the ticket file, and leads get an escalation notice if one is needed.
+   Everything is logged under **Activity**.
 """)
 
 with st.container(horizontal=True):

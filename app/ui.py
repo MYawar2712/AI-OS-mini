@@ -1,4 +1,4 @@
-"""Shared logic and UI pieces for the Triage Desk pages (pages stay direct scripts)."""
+﻿"""Shared logic and UI pieces for the Triage Desk pages (pages stay direct scripts)."""
 from __future__ import annotations
 
 import json
@@ -7,11 +7,13 @@ from datetime import datetime, timezone
 
 import streamlit as st
 
-import src.pipeline.run as pipeline_run  # module import so tests can swap triage()
 from app import labels as L
+from src import adapters
+from src.adapters.ticket_queue import QueueSnapshot
+from src.observability import friendly_error
 from src.pipeline.context import _customers
 import src.pipeline.handoff as handoff  # module import: always use the current save location
-from src.schemas import InboundTicket, ReviewDecision, load_test_cases
+from src.schemas import InboundTicket, ReviewDecision
 from src.taxonomy import ROOT, load_taxonomy
 
 TAX = load_taxonomy()
@@ -20,17 +22,14 @@ PRIORITY_BADGE = {"P1": ("red", ":material/emergency:"), "P2": ("orange", ":mate
 
 
 # ---------------------------------------------------------------- data
-@st.cache_data
-def demo_inbox() -> list[dict]:
-    """Synthetic demo tickets (dev + held-out sets). Static files, so cached."""
-    out: list[dict] = []
-    for f in ("eval/test_cases.jsonl", "eval/test_cases_holdout.jsonl"):
-        out += [c.ticket.model_dump(mode="json") for c in load_test_cases(ROOT / f)]
-    return out
+STATUS_TEXT = {"new": "New", "ready_for_review": "Ready for review", "triaged": "Triaged",
+               "manual_triage": "Manual triage"}
+STATUS_COLOR = {"New": "#3B82F6", "Ready for review": "#8B5CF6", "Triaged": "#22C55E", "Manual triage": "#EF4444"}
 
 
-def all_tickets() -> list[InboundTicket]:
-    return [InboundTicket.model_validate(t) for t in demo_inbox() + st.session_state.new_tickets]
+def queue_snapshot() -> QueueSnapshot:
+    """Read the live ticket queue (CSV) every rerun, so edits made in Excel show up straight away."""
+    return adapters.get_queue().read()
 
 
 def audit_rows() -> list[dict]:
@@ -40,17 +39,16 @@ def audit_rows() -> list[dict]:
     return [json.loads(line) for line in p.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def reviewed_ids() -> dict[str, str]:
-    return {r["review"]["ticket_id"]: r["review"]["decision"] for r in audit_rows()}
-
+def show_error(e: BaseException) -> None:
+    title, what = friendly_error(e)
+    st.error(what, title=title, icon=":material/error:")
 
 def customer_name(cid: str | None) -> str:
     c = _customers().get(cid or "")
     return c["company_name"].replace(" (Synthetic)", "") if c else "Unknown sender"
 
 
-def runs_dir_label() -> str:
-    d = handoff.runs_dir()
+def path_label(d) -> str:
     return (d.relative_to(ROOT) if d.is_relative_to(ROOT) else d).as_posix()
 
 
@@ -132,16 +130,17 @@ def finish(t: InboundTicket, res, trace, decision: str, edits: dict | None = Non
                             edited_fields=edits or {}, comment=comment, reviewed_at=datetime.now(timezone.utc),
                             seconds_to_decide=round(time.perf_counter() - shown_at, 1))
     try:
-        _, outbox = handoff.record(res, trace, review)
-    except Exception as e:  # invalid edit etc.: nothing is written
-        st.error(f"{e}. Nothing was written. Please check your edit and try again.", title="Could not save",
-                 icon=":material/error:")
+        _, outbox, delivery = handoff.record(res, trace, review)
+    except Exception as e:  # invalid edit, ticket file locked...: nothing is written
+        show_error(e)
         return
     st.session_state.done = {"ticket_id": t.ticket_id, "decision": decision,
                              "fields": outbox.fields if outbox else None,
-                             "note": outbox.internal_note if outbox else None}
-    st.session_state.result = None
+                             "note": outbox.internal_note if outbox else None,
+                             "written_back": delivery.written_back, "queue_file": delivery.queue_file,
+                             "notified": delivery.notified, "warnings": delivery.warnings}
     st.session_state.mode = None
+    st.session_state.retriage = None
     st.session_state.selected_ticket = None  # move on to the next waiting ticket
     st.rerun()
 
@@ -168,7 +167,7 @@ def review_panel(t: InboundTicket, res, trace) -> None:
             nq = st.selectbox("Send to", queues, index=queues.index(res.queue), format_func=lambda x: L.QUEUE[x])
             ne = st.segmented_control("Needs a lead?", ["yes", "no"], default="yes" if res.escalate else "no",
                                       required=True, format_func=str.capitalize, key="edit_escalate")
-            why = st.text_input("Why are you changing it?", placeholder="Helps improve the system")
+            why = st.text_input("Why are you changing it?", placeholder="Helps improve the system", key="edit_reason")
             if st.form_submit_button("Save my edit", type="primary", icon=":material/save:"):
                 edits = {k: v for k, v, old in [("intent", ni, res.intent), ("priority", np_, res.priority),
                                                 ("queue", nq, res.queue), ("escalate", ne, "yes" if res.escalate else "no")]
@@ -177,6 +176,7 @@ def review_panel(t: InboundTicket, res, trace) -> None:
     elif st.session_state.mode == "reject":
         with st.form("reject_form", border=False):
             with st.container(horizontal=True, vertical_alignment="bottom"):
-                why = st.text_input("Why are you rejecting it?", placeholder="e.g. wrong category, spam, needs more context")
+                why = st.text_input("Why are you rejecting it?", placeholder="e.g. wrong category, spam, needs more context",
+                                    key="reject_reason")
                 if st.form_submit_button("Confirm reject", type="primary", icon=":material/block:"):
                     finish(t, res, trace, "rejected", comment=why)

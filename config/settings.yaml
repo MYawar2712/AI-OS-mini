@@ -40,3 +40,19 @@ pipeline:
   max_tokens: 700        # JSON facts only
   llm_retries: 1         # one retry with the validation error, then fallback to human triage
   runs_dir: data/runs    # audit log + ticketing outbox (git-ignored)
+
+# Day 3 integrations (src/adapters). Runtime files live in `dir` (git-ignored) and are created on first run
+# from the committed sample data. Override the folder with the TRIAGE_DATA_DIR environment variable.
+integrations:
+  dir: data/integrations
+  crm:
+    backend: sqlite                      # sqlite (default) | json  (read-only customer lookup)
+    file: crm.sqlite                     # inside `dir`; built from paths.customers on first run
+  ticket_queue:
+    file: ticket_queue.csv               # inside `dir`; open it in Excel to add tickets or read the triage
+    seed: data/sample/ticket_queue_sample.csv
+  notifier:
+    file: escalations.jsonl              # inside `dir`; one line per approved escalation
+    webhook_env: ESCALATION_WEBHOOK_URL  # optional Slack/Teams incoming webhook, set in .env
+    timeout_seconds: 5
+  process_workers: 4                     # tickets triaged in parallel by "Process new tickets"

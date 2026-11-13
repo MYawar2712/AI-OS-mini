@@ -1,8 +1,8 @@
-# Implementation plan and tracker (5-day challenge)
+﻿# Implementation plan and tracker (5-day challenge)
 
 > **Single source of truth for progress.** Every brief requirement → status → evidence → next action.
 > Legend: ✅ done · 🟡 partial / done with caveat · ❌ not started · 👤 needs the owner (a decision, account, or a real person).
-> Last updated: 2026-11-12 (end of Day 2 build).
+> Last updated: 2026-11-13 (Day 3 built; owner run 3.10 pending).
 
 ---
 
@@ -43,14 +43,14 @@ Honesty rules that apply to every day:
 ```
 | Layer | Owns | Never does | Module (✅ exists / ❌ planned) |
 |---|---|---|---|
-| Trigger / ingest | Picking up new tickets, parsing into `InboundTicket` | Business decisions | ❌ `src/adapters/ticket_source.py` (Day 3) |
+| Trigger / ingest | Picking up new tickets, parsing into `InboundTicket` | Business decisions | ✅ `src/adapters/ticket_queue.py` + `src/pipeline/batch.py` |
 | Safety | Validation, secret redaction, injection detection | Calling the LLM with raw secrets | ✅ `src/pipeline/redact.py`, `injection.py` |
-| Context | Read-only customer lookup | Writing to the CRM; sending CRM data to the LLM | ✅ v0 `context.py` → ❌ `src/adapters/crm.py` (Day 3) |
+| Context | Read-only customer lookup | Writing to the CRM; sending CRM data to the LLM | ✅ `context.py` → `src/adapters/crm.py` (SQLite) |
 | AI | Reading the ticket into `ExtractedFacts` | Priority, queue, escalation, tools, writes | ✅ `src/pipeline/llm_extract.py`, `src/llm_client.py` |
 | Policy | Priority, queue, escalation, missing info, safe action | Free-form judgement | ✅ `src/pipeline/rules.py` + `config/taxonomy.yaml` |
 | Human | Approve / edit / reject; escalations | n/a | ✅ CLI `scripts/triage.py` + ✅ web UI `app/review.py` (polish Day 5) |
-| Output | Ticket fields + internal note, escalation notice, audit | Customer-facing replies, refunds, account changes | ✅ v0 `handoff.py` (outbox) → ❌ `src/adapters/ticketing.py`, `notifier.py` (Day 3) |
-| Observability | Structured logs, traces, metrics | Storing unredacted secrets | 🟡 audit JSONL → ❌ `src/observability.py` (+ optional LangSmith) (Day 3) |
+| Output | Ticket fields + internal note, escalation notice, audit | Customer-facing replies, refunds, account changes | ✅ `handoff.py` → `ticket_queue.write_back`, `notifier.py` |
+| Observability | Structured logs, traces, metrics | Storing unredacted secrets | ✅ `src/observability.py` (JSON log, run IDs) + audit; LangSmith optional later |
 | Evaluation | Test sets, rubric, metrics, comparisons | Tuning on held-out data | ✅ `eval/`, `scripts/run_day2.py` |
 
 ### 1.2 Target repo structure (✅ = exists now)
@@ -70,7 +70,7 @@ data/synthetic/ ✅ customers, KB          data/runs/ (git-ignored) audit + outb
 docs/              PLAN.md ✅  day1/ ✅  day2/ ✅  day3/ ❌  day4/ ❌  day5/ ❌
                    decisions.md ✅  assumptions.md ✅
                    README (user) ✅→🟡  RUNBOOK.md ❌  CASE_STUDY.md ❌  AI_COLLABORATION.md ❌👤
-tests/ ✅          172 tests (incl. 10 UI tests), no network needed
+tests/ ✅          196 tests (incl. 12 UI, 22 adapter tests), no network needed
 ```
 
 ### 1.3 Contracts (stable; change only with an ADR)
@@ -83,14 +83,14 @@ tests/ ✅          172 tests (incl. 10 UI tests), no network needed
 | Day | Status | Last evidence | Blocking items |
 |---|---|---|---|
 | 1 Discover & baseline | ✅ done (with documented gaps) | [day1/00_day1_summary.md](day1/00_day1_summary.md) | 👤 real-user interview not possible (documented) |
-| 2 Design & v0 | ✅ done, **not yet pushed** | [day2/00_day2_summary.md](day2/00_day2_summary.md) | Latency gate G9 fails (6.3 s vs 5 s), carried to Day 3 |
-| 3 Working core | ❌ next | n/a | 👤 integration accounts decision; 👤 a proxy user for the first run |
+| 2 Design & v0 | ✅ done, pushed (`d611d24`) | [day2/00_day2_summary.md](day2/00_day2_summary.md) | Latency gate G9 fails (6.3 s vs 5 s), carried to Day 3 |
+| 3 Working core | 🟡 built and verified; owner run pending | [day3/00_day3_summary.md](day3/00_day3_summary.md) | 👤 owner run (3.10), recorded in [day3/02_proxy_user_run.md](day3/02_proxy_user_run.md) |
 | 4 Evaluate & harden | ❌ | n/a | 👤 proxy-user feedback |
 | 5 Handoff & present | ❌ | n/a | 👤 record the 5-min video; 👤 AI collaboration note decision |
 
 **Built ahead of schedule (2026-11-12, owner request; Day 3 plan left unchanged):** Streamlit review UI `app/review.py` ("Triage Desk"): inbox of synthetic tickets, add-a-ticket form, plain-language triage card, "Why?" panel, Accept / Edit / Reject → outbox + audit, Activity tab, Help tab. 6 UI tests (`tests/test_app.py`), verified with the real model on TC10. Relevant to tasks 3.6 / 5.5. Day 3 integrations will plug into it. **Redesigned the same day** with Streamlit's official bundled agent skill (ADR-024): multipage nav (Inbox / New ticket / Activity / Help), theme config, selectable inbox table, native badges; 10 UI tests; verified via the agent API.
 
-Last pushed commit: `d8e0bde` (Day 1). Day 2 is uncommitted until the owner runs the commit command.
+Last pushed commit: `d611d24` (Day 2 + UI). Day 3 is uncommitted until the owner runs the commit command.
 Owner-wide pending: 👤 `qwen3.8-27b` price per token (cost metric) · 👤 rotate the Alibaba API key.
 
 ---
@@ -130,7 +130,9 @@ Carried forward: ❌ latency 6.3 s (gate < 5 s) → Day 3 task 3.7 · TC19 miss 
 
 ---
 
-## 5. Day 3: Build the working core. Status: ❌ not started
+## 5. Day 3: Build the working core. Status: 🟡 built and verified (2026-11-13); 3.10 owner run pending
+
+Owner decisions: O3.1 = default (SQLite CRM, CSV ticket queue with write-back, escalation file + optional webhook); O3.2 = Streamlit; O3.3 = owner runs it as fallback proxy (labelled as such).
 
 **Brief:** working core flow trigger → final output for a non-developer · ≥ 2 real data-source/tool integrations · validation, structured outputs, logs, useful error messages · config/secrets separated · one interface · first execution by the target or a proxy user.
 **Key question:** can someone else run the core workflow when you are not beside them?
@@ -143,17 +145,17 @@ Carried forward: ❌ latency 6.3 s (gate < 5 s) → Day 3 task 3.7 · TC19 miss 
 | O3.3 | Proxy user for the first run | A non-developer who follows the README **without help** (friend/colleague, or the owner as fallback, labelled as such). Must actually happen |
 
 ### Tasks
-- [ ] **3.1 Adapters (integration #1: customer data).** `src/adapters/crm.py`: an interface with a SQLite implementation (seeded from `customers.json`) plus the existing JSON one. `context.py` calls the interface. Tests.
-- [ ] **3.2 Adapters (integration #2: ticket queue).** `src/adapters/ticket_source.py` reads new tickets (CSV/Excel or Sheets) with validation and clear per-row errors. `src/adapters/ticketing.py` writes approved triage back (status, fields, internal note). Tests with temp files.
-- [ ] **3.3 Integration #3 (optional): notifications / tracing.** Escalation notifier (Slack/Teams webhook, or a file-based "escalations" log), and/or LangSmith tracing when `LANGSMITH_API_KEY` is set.
-- [ ] **3.4 Trigger.** "Process new tickets" picks up every ticket with status `new` from the queue (button in the UI plus the CLI `python -m scripts.process_queue`).
-- [ ] **3.5 Logging and useful errors.** `src/observability.py`: structured JSON logs with a run ID per ticket. Each error message tells a non-developer **what happened and what to do** (missing key, bad file, API down → "ticket sent to manual triage").
-- [ ] **3.6 Interface.** `app/review.py` (Streamlit): queue view, triage card in plain language, why (rules fired), Accept / Edit / Reject, confirmation of what was written. Launch: `streamlit run app/review.py`.
-- [ ] **3.7 Latency fix (gate G9 < 5 s).** Shorter output contract (drop or trim `rationale`, cap summary). Re-measure. If still > 5 s, run `deepseek-v4.1-flash` with reasoning off under the same dev eval and decide by ADR. **Never on held-out.**
-- [ ] **3.8 Config/secrets audit.** Everything configurable in `config/*.yaml`; secrets only in `.env`; `.env.example` complete (Alibaba, LangSmith, webhook). Startup check with a friendly message.
-- [ ] **3.9 User README v1 + quick start** (≤ 3 steps) written for a non-developer.
-- [ ] **3.10 👤 First execution by a proxy user.** They follow the README alone. Record in `docs/day3/02_proxy_user_run.md`: who, setup time, where they got stuck, what they understood or misread on the card, their verbatim quotes. **Real session only.**
-- [ ] **3.11 Day 3 docs.** `docs/day3/00_day3_summary.md` (incl. key-question answer), `01_integrations.md`; ADRs; update §2 of this plan.
+- [x] **3.1 Adapters (integration #1: customer data).** `src/adapters/crm.py`: an interface with a SQLite implementation (seeded from `customers.json`) plus the existing JSON one. `context.py` calls the interface. Tests.
+- [x] **3.2 Adapters (integration #2: ticket queue).** `src/adapters/ticket_source.py` reads new tickets (CSV/Excel or Sheets) with validation and clear per-row errors. `src/adapters/ticketing.py` writes approved triage back (status, fields, internal note). Tests with temp files.
+- [x] **3.3 Integration #3 (optional): notifications / tracing.** Escalation notifier (Slack/Teams webhook, or a file-based "escalations" log), and/or LangSmith tracing when `LANGSMITH_API_KEY` is set. *(Done: escalation file + optional webhook. LangSmith waits for the owner's key.)*
+- [x] **3.4 Trigger.** "Process new tickets" picks up every ticket with status `new` from the queue (button in the UI plus the CLI `python -m scripts.process_queue`).
+- [x] **3.5 Logging and useful errors.** `src/observability.py`: structured JSON logs with a run ID per ticket. Each error message tells a non-developer **what happened and what to do** (missing key, bad file, API down → "ticket sent to manual triage").
+- [x] **3.6 Interface.** `app/review.py` (Streamlit): queue view, triage card in plain language, why (rules fired), Accept / Edit / Reject, confirmation of what was written. Launch: `streamlit run app/review.py`.
+- [x] **3.7 Latency fix (gate G9 < 5 s).** Shorter output contract (drop or trim `rationale`, cap summary). Re-measure. If still > 5 s, run `deepseek-v4.1-flash` with reasoning off under the same dev eval and decide by ADR. **Never on held-out.** *(Done: extract-v2, median 6.0 → 3.6 s, quality unchanged, ADR-026; no model switch.)*
+- [x] **3.8 Config/secrets audit.** Everything configurable in `config/*.yaml`; secrets only in `.env`; `.env.example` complete (Alibaba, LangSmith, webhook). Startup check with a friendly message.
+- [x] **3.9 User README v1 + quick start** (≤ 3 steps) written for a non-developer.
+- [ ] **3.10 👤 First execution by a proxy user.** *(Still open. An automated clean-room README walkthrough was done instead on 2026-11-13, labelled as such, with 7 findings fixed: [day3/03_cleanroom_walkthrough.md](day3/03_cleanroom_walkthrough.md). It is not a substitute for a person.)* They follow the README alone. Record in `docs/day3/02_proxy_user_run.md`: who, setup time, where they got stuck, what they understood or misread on the card, their verbatim quotes. **Real session only.**
+- [x] **3.11 Day 3 docs.** `docs/day3/00_day3_summary.md` (incl. key-question answer), `01_integrations.md`; ADRs; update §2 of this plan.
 
 **Exit criteria:**
 - A non-developer processes the queue in the UI, end to end: new tickets → triage → approve → written back plus an escalation notice.
@@ -224,7 +226,7 @@ Carried forward: ❌ latency 6.3 s (gate < 5 s) → Day 3 task 3.7 · TC19 miss 
 
 | Deliverable | Required content | Status | Where |
 |---|---|---|---|
-| Working system | Runnable repo, sample data, executable core path, example config without secrets | 🟡 v0 CLI; UI + adapters on Day 3 | repo, `.env.example`, `data/synthetic/` |
+| Working system | Runnable repo, sample data, executable core path, example config without secrets | ✅ UI + 3 integrations (Day 3); clean-clone test on Day 5 | repo, `.env.example`, `data/synthetic/` |
 | Evaluation package: test cases + expected behaviour | 8–12+ cases | ✅ 12 dev + 12 held-out | `eval/` |
 | Evaluation package: baseline vs final | comparison | 🟡 vs v0 (Day 2); final on Day 4 | `eval/results/day2/` |
 | Evaluation package: pass/fail + failure analysis | per case + RCA | 🟡 pass/fail ✅, RCA Day 4 | n/a |
@@ -248,7 +250,7 @@ Carried forward: ❌ latency 6.3 s (gate < 5 s) → Day 3 task 3.7 · TC19 miss 
 | ID | Decision | Why it matters | Needed by |
 |---|---|---|---|
 | D1 | **AI collaboration note vs the "no AI attribution in repo files" rule.** The brief *requires* a note describing the AI tools used. Options: (a) put it in the repo as `docs/AI_COLLABORATION.md`; (b) keep it outside the repo and submit it separately. Commit metadata stays owner-only either way | Missing it loses part of "Ownership & communication"; misstating AI use is worse | Day 5 |
-| D2 | Integrations (O3.1) and interface (O3.2) | Shapes all of Day 3 | Start of Day 3 |
+| D2 | ~~Integrations (O3.1) and interface (O3.2)~~ decided 2026-11-13: default offline integrations + Streamlit | n/a | done |
 | D3 | Proxy user (O3.3, 4.8) | Brief requires a real first run and real feedback | Day 3 / Day 4 |
 | D4 | `qwen3.8-27b` price per token | Cost metric and G10 | Day 4 |
 | D5 | Rotate the Alibaba API key | Security hygiene (it was pasted in chat) | Any time |

@@ -1,4 +1,4 @@
-"""Pipeline tests with a FAKE LLM (no network, no cost): safety steps, rules, retry, fallback, handoff."""
+﻿"""Pipeline tests with a FAKE LLM (no network, no cost): safety steps, rules, retry, fallback, handoff."""
 import json
 from datetime import datetime, timezone
 
@@ -172,7 +172,7 @@ def _review(decision, **kw):
 def test_accept_writes_outbox_and_audit(tmp_path, monkeypatch):
     monkeypatch.setattr(handoff, "runs_dir", lambda: tmp_path)
     r, tr = triage(BY_ID["TC01"].ticket, llm=fake_llm(facts()))
-    final, outbox = handoff.record(r, tr, _review("accepted"))
+    final, outbox, _ = handoff.record(r, tr, _review("accepted"))
     assert outbox and outbox.fields["queue"] == "billing"
     assert (tmp_path / "ticketing_outbox.jsonl").exists() and (tmp_path / "audit.jsonl").exists()
 
@@ -180,14 +180,14 @@ def test_accept_writes_outbox_and_audit(tmp_path, monkeypatch):
 def test_reject_writes_audit_only(tmp_path, monkeypatch):
     monkeypatch.setattr(handoff, "runs_dir", lambda: tmp_path)
     r, tr = triage(BY_ID["TC01"].ticket, llm=fake_llm(facts()))
-    _, outbox = handoff.record(r, tr, _review("rejected", comment="wrong"))
+    _, outbox, _ = handoff.record(r, tr, _review("rejected", comment="wrong"))
     assert outbox is None and not (tmp_path / "ticketing_outbox.jsonl").exists() and (tmp_path / "audit.jsonl").exists()
 
 
 def test_edits_are_validated_against_contract(tmp_path, monkeypatch):
     monkeypatch.setattr(handoff, "runs_dir", lambda: tmp_path)
     r, tr = triage(BY_ID["TC01"].ticket, llm=fake_llm(facts()))
-    final, _ = handoff.record(r, tr, _review("edited", edited_fields={"priority": "P2", "escalate": "yes"}))
+    final, _, _ = handoff.record(r, tr, _review("edited", edited_fields={"priority": "P2", "escalate": "yes"}))
     assert final.priority == "P2" and final.escalate and final.escalation_reasons
     with pytest.raises(Exception):
         handoff.apply_edits(r, {"priority": "P9"})

@@ -1,4 +1,4 @@
-"""The triage pipeline: one InboundTicket in -> one TriageResult + PipelineTrace out.
+﻿"""The triage pipeline: one InboundTicket in -> one TriageResult + PipelineTrace out.
 
     validate -> redact -> injection check -> customer lookup -> LLM fact extraction (validated, 1 retry)
              -> deterministic rules -> assemble result   (on LLM failure: safe fallback to human triage)
@@ -12,6 +12,7 @@ import time
 from typing import Callable
 
 from src.llm_client import LLMNotConfigured, LLMResponse, call_llm
+from src.observability import log_event, new_run_id
 from src.pipeline import rules
 from src.pipeline.context import lookup_customer
 from src.pipeline.injection import detect_injection
@@ -53,7 +54,7 @@ def _fallback(ticket: InboundTicket, trace: PipelineTrace, extra_reasons: list[s
 
 def triage(ticket: InboundTicket, llm: Callable[..., LLMResponse] = call_llm) -> tuple[TriageResult, PipelineTrace]:
     start = time.perf_counter()
-    trace = PipelineTrace(ticket_id=ticket.ticket_id, pipeline_version=PIPELINE_VERSION,
+    trace = PipelineTrace(ticket_id=ticket.ticket_id, run_id=new_run_id(), pipeline_version=PIPELINE_VERSION,
                           model=load_settings()["llm"]["model"], status="ok")
     t = _Timer(trace)
 
@@ -86,6 +87,7 @@ def triage(ticket: InboundTicket, llm: Callable[..., LLMResponse] = call_llm) ->
         result = _fallback(ticket, trace, extra)
         trace.rules_fired.append("FALLBACK")
         trace.total_ms = round((time.perf_counter() - start) * 1000, 2)
+        _log(trace, result)
         return result, trace
 
     f = trace.facts = ex.facts
@@ -107,6 +109,21 @@ def triage(ticket: InboundTicket, llm: Callable[..., LLMResponse] = call_llm) ->
             ticket_id=ticket.ticket_id, intent=intent, secondary_intent=secondary, priority=prio, queue=queue,
             escalate=bool(reasons), escalation_reasons=reasons, missing_info=missing,
             summary=redact(f.summary).text[:800], suggested_next_action=redact(action).text[:500],
-            confidence=f.confidence, rationale=redact(f.rationale).text[:1200])
+            confidence=f.confidence,
+            rationale=(redact(f.rationale).text if f.rationale.strip() else _rules_rationale(intent, prio, fired))[:1200])
     trace.total_ms = round((time.perf_counter() - start) * 1000, 2)
+    _log(trace, result)
     return result, trace
+
+
+def _rules_rationale(intent: str, prio: str, fired: list[str]) -> str:
+    """extract-v2 asks the model for facts only; the explanation is which rules decided the result."""
+    return f"Intent {intent} read by the assistant; {prio} and routing set by rules: {', '.join(fired) or 'defaults'}."
+
+
+def _log(trace: PipelineTrace, result: TriageResult) -> None:
+    log_event("triage", level="warning" if trace.status == "fallback" else "info", run_id=trace.run_id,
+              ticket_id=trace.ticket_id, status=trace.status, priority=result.priority, queue=result.queue,
+              escalate=result.escalate, total_ms=trace.total_ms, llm_attempts=trace.llm_attempts,
+              llm_errors=trace.llm_errors, tokens_in=trace.input_tokens, tokens_out=trace.output_tokens,
+              redactions=trace.redactions, injection=bool(trace.injection_matches), model=trace.model)
