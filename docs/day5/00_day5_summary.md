@@ -11,7 +11,7 @@
 | 5-minute screen-recorded demo | 👤 | Script prepared. **The recording itself has to be made by the owner** |
 | Portfolio case study | ✅ | [CASE_STUDY.md](../CASE_STUDY.md), all 8 sections |
 | Adoption and quality metrics for the first two weeks, next iteration | ✅ | [02_rollout_metrics.md](02_rollout_metrics.md) |
-| AI collaboration note | 👤 | Written and kept outside the repo for the owner to submit |
+| AI collaboration note | ✅ | [AI_COLLABORATION.md](../AI_COLLABORATION.md) |
 
 ## Key question: can another person understand, run, trust and improve the system?
 

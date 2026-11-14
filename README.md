@@ -92,6 +92,7 @@ To add a ticket, use **New ticket**, or add a row with status `new` to the CSV. 
 | [docs/day2/01_system_design.md](docs/day2/01_system_design.md) | Architecture, data contracts, safety boundaries |
 | [docs/RUNBOOK.md](docs/RUNBOOK.md) | Operating it: config, logs, what to do when something breaks, changing a rule safely |
 | [docs/decisions.md](docs/decisions.md) | 33 decisions with alternatives and trade-offs |
+| [docs/AI_COLLABORATION.md](docs/AI_COLLABORATION.md) | Which AI tools were used, for what, and how the results were checked |
 | [docs/day5/02_rollout_metrics.md](docs/day5/02_rollout_metrics.md) | Metrics and gates for a two-week pilot |
 
 | Code | What |
