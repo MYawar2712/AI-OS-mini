@@ -1,0 +1,1 @@
+{"at": "2026-11-14T10:33:20.000283+00:00", "label": "v1-holdout", "runs": 3, "pipeline_version": "v1/extract-v2", "case_pass_rate": {"mean": 0.9444666666666667, "min": 0.9167, "max": 1.0}, "case_passes": {"TC13": 3, "TC14": 3, "TC15": 3, "TC16": 3, "TC17": 3, "TC18": 3, "TC19": 2, "TC20": 3, "TC21": 3, "TC22": 3, "TC23": 3, "TC24": 2}}

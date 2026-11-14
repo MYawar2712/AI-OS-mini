@@ -5,3 +5,4 @@ pytest>=8.0
 openai>=1.40     # OpenAI-compatible client, used for Alibaba Cloud Model Studio (default LLM provider)
 anthropic>=0.70  # optional alternative provider
 streamlit>=1.40,<2     # review UI for non-developers (app/review.py)
+langsmith>=0.3        # optional tracing + eval datasets (on when LANGSMITH_API_KEY is set in .env)

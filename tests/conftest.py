@@ -1,4 +1,4 @@
-"""Every test gets its own empty integrations folder and audit folder: tests never touch data/integrations
+﻿"""Every test gets its own empty integrations folder and audit folder: tests never touch data/integrations
 or data/runs."""
 import pytest
 
@@ -11,6 +11,7 @@ def isolated_data(tmp_path, monkeypatch):
     data, runs = tmp_path / "integrations", tmp_path / "runs"
     runs.mkdir()
     monkeypatch.setenv("TRIAGE_DATA_DIR", str(data))
+    monkeypatch.setenv("TRIAGE_TRACING", "off")  # tests never send traces
     monkeypatch.setattr(handoff, "runs_dir", lambda: runs)
     _customers.cache_clear()
     yield {"data": data, "runs": runs}

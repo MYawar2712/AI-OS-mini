@@ -1,0 +1,263 @@
+{
+  "label": "v1",
+  "set": "adversarial",
+  "runs": 3,
+  "pipeline_version": "v1/extract-v2",
+  "systems": {
+    "pipeline": {
+      "case_pass_rate": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "critical_failure_cases": {
+        "mean": 0,
+        "min": 0,
+        "max": 0
+      },
+      "escalation_recall": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "escalation_precision": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "under_prioritization_count": {
+        "mean": 0,
+        "min": 0,
+        "max": 0
+      },
+      "must_not_violation_cases": {
+        "mean": 0,
+        "min": 0,
+        "max": 0
+      },
+      "schema_validity_rate": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "intent_accuracy": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "priority_exact_accuracy": {
+        "mean": 0.9333333333333333,
+        "min": 0.9,
+        "max": 1.0
+      },
+      "routing_accuracy": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "escalation_reason_recall": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "missing_info_recall": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "human_touch_rate": {
+        "mean": 0.9,
+        "min": 0.9,
+        "max": 0.9
+      },
+      "latency_ms_median": {
+        "mean": 3515.05,
+        "min": 3273.41,
+        "max": 3648.05
+      },
+      "latency_ms_p95": {
+        "mean": 5518.583333333333,
+        "min": 4161.42,
+        "max": 7925.29
+      }
+    },
+    "keyword_baseline": {
+      "case_pass_rate": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "critical_failure_cases": {
+        "mean": 8,
+        "min": 8,
+        "max": 8
+      },
+      "escalation_recall": {
+        "mean": 0.2222,
+        "min": 0.2222,
+        "max": 0.2222
+      },
+      "escalation_precision": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "under_prioritization_count": {
+        "mean": 3,
+        "min": 3,
+        "max": 3
+      },
+      "must_not_violation_cases": {
+        "mean": 6,
+        "min": 6,
+        "max": 6
+      },
+      "schema_validity_rate": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "intent_accuracy": {
+        "mean": 0.7,
+        "min": 0.7,
+        "max": 0.7
+      },
+      "priority_exact_accuracy": {
+        "mean": 0.2,
+        "min": 0.2,
+        "max": 0.2
+      },
+      "routing_accuracy": {
+        "mean": 0.9,
+        "min": 0.9,
+        "max": 0.9
+      },
+      "escalation_reason_recall": {
+        "mean": 0.1818,
+        "min": 0.1818,
+        "max": 0.1818
+      },
+      "missing_info_recall": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "human_touch_rate": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "latency_ms_median": {
+        "mean": 0.84,
+        "min": 0.84,
+        "max": 0.84
+      },
+      "latency_ms_p95": {
+        "mean": 15.44,
+        "min": 15.44,
+        "max": 15.44
+      }
+    },
+    "naive_llm_baseline": {
+      "case_pass_rate": {
+        "mean": 0.5,
+        "min": 0.5,
+        "max": 0.5
+      },
+      "critical_failure_cases": {
+        "mean": 3,
+        "min": 3,
+        "max": 3
+      },
+      "escalation_recall": {
+        "mean": 0.6667,
+        "min": 0.6667,
+        "max": 0.6667
+      },
+      "escalation_precision": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "under_prioritization_count": {
+        "mean": 0,
+        "min": 0,
+        "max": 0
+      },
+      "must_not_violation_cases": {
+        "mean": 1,
+        "min": 1,
+        "max": 1
+      },
+      "schema_validity_rate": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "intent_accuracy": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "priority_exact_accuracy": {
+        "mean": 0.5,
+        "min": 0.5,
+        "max": 0.5
+      },
+      "routing_accuracy": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "escalation_reason_recall": {
+        "mean": 0.5455,
+        "min": 0.5455,
+        "max": 0.5455
+      },
+      "missing_info_recall": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "human_touch_rate": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "latency_ms_median": {
+        "mean": 22433.95,
+        "min": 22433.95,
+        "max": 22433.95
+      },
+      "latency_ms_p95": {
+        "mean": 152536.7,
+        "min": 152536.7,
+        "max": 152536.7
+      }
+    }
+  },
+  "case_passes": {
+    "TC25": 3,
+    "TC26": 3,
+    "TC27": 3,
+    "TC28": 3,
+    "TC29": 3,
+    "TC30": 3,
+    "TC31": 3,
+    "TC32": 3,
+    "TC33": 3,
+    "TC34": 3
+  },
+  "case_failures": {
+    "TC25": [],
+    "TC26": [],
+    "TC27": [],
+    "TC28": [],
+    "TC29": [],
+    "TC30": [],
+    "TC31": [],
+    "TC32": [],
+    "TC33": [],
+    "TC34": []
+  }
+}

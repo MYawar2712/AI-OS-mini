@@ -95,7 +95,8 @@ def test_edit_priority_is_saved(app, tmp_path):
     assert audit["review"]["decision"] == "edited" and audit["final"]["priority"] == "P2"
 
 
-@pytest.mark.parametrize("page", ["app_pages/new_ticket.py", "app_pages/activity.py", "app_pages/help.py"])
+@pytest.mark.parametrize("page", ["app_pages/new_ticket.py", "app_pages/activity.py", "app_pages/quality.py",
+                                  "app_pages/help.py"])
 def test_other_pages_render(app, page):
     at = app.run()
     at.switch_page(page).run()
@@ -142,3 +143,13 @@ def test_process_new_tickets_button_prefills_all(app):
     assert not at.exception
     assert any("Processed 24 new ticket(s)" in str(e.proto) for e in at.success)
     assert at.button(key="accept")  # first ticket now shows a card ready for review, no extra click
+
+def test_inbox_is_sorted_riskiest_first_and_filters(app):
+    at = app.run()
+    at.button(key="process").click().run()
+    df = at.dataframe[0].value
+    assert df["Suggested"].iloc[0].startswith("P1")  # fake facts make every ticket a P1 that needs a lead
+    at.get_by_key("inbox_filter").set_value("Not processed").run()
+    assert not at.exception and any("Nothing here" in str(i.proto) for i in at.info)
+    at.get_by_key("inbox_filter").set_value("Needs a lead").run()
+    assert len(at.dataframe[0].value) == 24

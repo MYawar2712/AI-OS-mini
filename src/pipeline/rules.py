@@ -1,4 +1,4 @@
-"""Step 7: deterministic policy. Turns extracted facts + detector flags + customer context into
+﻿"""Step 7: deterministic policy. Turns extracted facts + detector flags + customer context into
 priority, queue and escalation, following config/taxonomy.yaml. Every rule that fires is recorded (audit).
 
 Rule IDs used in traces:
@@ -44,8 +44,14 @@ def adjust_intent(f: ExtractedFacts, fired: list[str]) -> tuple[str, Optional[st
 
 def priority(f: ExtractedFacts, intent: str, customer: Optional[dict], fired: list[str]) -> str:
     many = f.scope in ("multiple_users", "whole_team_or_company")
+    blocked = f.core_workflow_blocked
+    if not blocked and many and f.affects_job_today and f.workaround_available is False:
+        # R-C1 (Day 4, failure F2): the model sometimes answers "not blocked" while also saying many users are
+        # affected, a job TODAY is hit and there is no workaround. Those facts together mean the work is blocked.
+        blocked = True
+        fired.append("R-C1")
     if f.data_loss_or_corruption or f.security_or_unauthorised_access or (
-            f.core_workflow_blocked and many and f.workaround_available is not True):
+            blocked and many and f.workaround_available is not True):
         fired.append("R-P1")
         return "P1"
     if (f.core_workflow_blocked or f.affects_job_today or f.admin_locked_out or f.payment_suspension_risk

@@ -12,7 +12,7 @@ import time
 from typing import Callable
 
 from src.llm_client import LLMNotConfigured, LLMResponse, call_llm
-from src.observability import log_event, new_run_id
+from src.observability import log_event, new_run_id, trace_run
 from src.pipeline import rules
 from src.pipeline.context import lookup_customer
 from src.pipeline.injection import detect_injection
@@ -21,7 +21,7 @@ from src.pipeline.redact import redact
 from src.schemas import InboundTicket, PipelineTrace, StepTiming, TriageResult
 from src.taxonomy import load_settings
 
-PIPELINE_VERSION = f"v0/{PROMPT_VERSION}"
+PIPELINE_VERSION = f"v1/{PROMPT_VERSION}"  # v1 = Day 4 hardening (R-C1, key aliases, token redaction, fail-high fallback)
 
 
 class _Timer:
@@ -44,7 +44,8 @@ def _fallback(ticket: InboundTicket, trace: PipelineTrace, extra_reasons: list[s
     """LLM unavailable or invalid twice: produce a VALID result that hands the ticket to a human."""
     reasons = list(dict.fromkeys(["low_confidence", *extra_reasons]))
     return TriageResult(
-        ticket_id=ticket.ticket_id, intent="general_inquiry", priority="P3", queue="tier1_general",
+        # P2, not P3 (Day 4): when the assistant cannot read a ticket its urgency is unknown, so fail high.
+        ticket_id=ticket.ticket_id, intent="general_inquiry", priority="P2", queue="tier1_general",
         escalate=True, escalation_reasons=reasons,
         missing_info=["account_id"] if not trace.customer_found else [],
         summary="Automatic triage unavailable for this ticket. Human triage required.",
@@ -52,7 +53,22 @@ def _fallback(ticket: InboundTicket, trace: PipelineTrace, extra_reasons: list[s
         confidence=0.0, rationale="Fallback: " + ("; ".join(trace.llm_errors) or "LLM not available")[:1000])
 
 
-def triage(ticket: InboundTicket, llm: Callable[..., LLMResponse] = call_llm) -> tuple[TriageResult, PipelineTrace]:
+def triage(ticket: InboundTicket, llm: Callable[..., LLMResponse] = call_llm,
+           tags: list[str] | None = None) -> tuple[TriageResult, PipelineTrace]:
+    """Run the pipeline. When LangSmith tracing is on, the run is traced with REDACTED text only."""
+    inputs = {"ticket_id": ticket.ticket_id, "channel": ticket.channel, "subject": redact(ticket.subject).text,
+              "body": redact(ticket.body).text, "customer_known": ticket.customer_id is not None}
+    with trace_run("triage", inputs=inputs, tags=[PIPELINE_VERSION, *(tags or [])],
+                   metadata={"pipeline_version": PIPELINE_VERSION, "synthetic": True}) as run:
+        result, trace = _triage(ticket, llm)
+        trace.langsmith_run_id = str(run.id) if run.id else None
+        run.end(outputs={"result": result.model_dump(), "status": trace.status, "rules_fired": trace.rules_fired,
+                         "redactions": trace.redactions, "injection_matches": trace.injection_matches,
+                         "llm_attempts": trace.llm_attempts, "llm_errors": trace.llm_errors})
+    return result, trace
+
+
+def _triage(ticket: InboundTicket, llm: Callable[..., LLMResponse]) -> tuple[TriageResult, PipelineTrace]:
     start = time.perf_counter()
     trace = PipelineTrace(ticket_id=ticket.ticket_id, run_id=new_run_id(), pipeline_version=PIPELINE_VERSION,
                           model=load_settings()["llm"]["model"], status="ok")
@@ -78,6 +94,8 @@ def triage(ticket: InboundTicket, llm: Callable[..., LLMResponse] = call_llm) ->
     if ex is not None:
         trace.llm_attempts, trace.input_tokens, trace.output_tokens = ex.attempts, ex.input_tokens, ex.output_tokens
         trace.llm_errors += ex.errors
+        if ex.repairs:
+            log_event("llm_output_repaired", run_id=trace.run_id, ticket_id=ticket.ticket_id, repairs=ex.repairs)
 
     if ex is None or ex.facts is None:
         trace.status = "fallback"

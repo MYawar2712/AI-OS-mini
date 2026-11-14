@@ -148,6 +148,7 @@ class PipelineTrace(_Strict):
 
     ticket_id: str
     run_id: Optional[str] = Field(default=None, description="Joins this trace to the structured log lines.")
+    langsmith_run_id: Optional[str] = Field(default=None, description="LangSmith trace ID when tracing is on.")
     pipeline_version: str
     model: str
     status: Literal["ok", "fallback"]

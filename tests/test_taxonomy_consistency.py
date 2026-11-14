@@ -1,4 +1,4 @@
-"""Expected outputs in the test set and the schema enums must agree with config/taxonomy.yaml."""
+﻿"""Expected outputs in the test set and the schema enums must agree with config/taxonomy.yaml."""
 import json
 import typing
 
@@ -9,7 +9,8 @@ from src.schemas import PRIORITY_RANK, load_test_cases
 from src.taxonomy import ROOT, load_taxonomy
 
 TAX = load_taxonomy()
-CASES = load_test_cases(ROOT / "eval" / "test_cases.jsonl") + load_test_cases(ROOT / "eval" / "test_cases_holdout.jsonl")
+CASES = load_test_cases(ROOT / "eval" / "test_cases.jsonl") + load_test_cases(ROOT / "eval" / "test_cases_holdout.jsonl") \
+    + load_test_cases(ROOT / "eval" / "test_cases_adversarial.jsonl")
 
 
 @pytest.mark.parametrize("literal,key", [

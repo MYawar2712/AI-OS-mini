@@ -219,3 +219,29 @@ def test_preflight_ok_and_missing_key(monkeypatch):
     monkeypatch.setattr("src.llm_client.is_configured", lambda: False)
     key = next(c for c in preflight.run_checks() if c.name == "AI assistant key")
     assert not key.ok and not key.blocking and ".env" in key.fix
+
+
+# ---------------------------------------------------------------- tracing privacy
+def test_trace_inputs_are_redacted(monkeypatch):
+    """Whatever is sent to LangSmith must never contain the raw card number or password."""
+    from contextlib import contextmanager
+
+    import src.pipeline.run as run_mod
+    seen = {}
+
+    class _Run:
+        id = "abc"
+
+        def end(self, outputs=None, **kw):
+            seen["outputs"] = outputs
+
+    @contextmanager
+    def fake_trace(name, inputs=None, **kw):
+        seen["inputs"] = inputs
+        yield _Run()
+    monkeypatch.setattr(run_mod, "trace_run", fake_trace)
+    t = _ticket(body="Card 4111 1111 1111 1111 cvv 123, my password is Hunter2! please fix billing")
+    result, trace = run_mod.triage(t, llm=_facts_llm)
+    blob = json.dumps(seen)
+    assert "4111" not in blob and "Hunter2" not in blob
+    assert "[REDACTED_CARD]" in seen["inputs"]["body"] and trace.langsmith_run_id == "abc"

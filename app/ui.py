@@ -10,7 +10,7 @@ import streamlit as st
 from app import labels as L
 from src import adapters
 from src.adapters.ticket_queue import QueueSnapshot
-from src.observability import friendly_error
+from src.observability import friendly_error, trace_url, tracing_enabled
 from src.pipeline.context import _customers
 import src.pipeline.handoff as handoff  # module import: always use the current save location
 from src.schemas import InboundTicket, ReviewDecision
@@ -121,6 +121,15 @@ def show_card(res, trace) -> None:
             ":material/timer: Run": f"{trace.status}, {trace.total_ms / 1000:.1f} s, {trace.llm_attempts} attempt(s)",
             ":material/memory: Model": f"{trace.model} · {trace.input_tokens} in / {trace.output_tokens} out tokens",
         }, border="horizontal")
+        if trace.langsmith_run_id and tracing_enabled():
+            # One API call to build the link, so only on request.
+            if st.button("Open the full trace in LangSmith", key=f"trace_{trace.run_id}", icon=":material/account_tree:",
+                         help="For the person who maintains this tool: the exact (redacted) text sent to the model and its answer."):
+                url = trace_url(trace.langsmith_run_id)
+                if url:
+                    st.link_button("Open LangSmith", url, icon=":material/open_in_new:")
+                else:
+                    st.caption("The trace isn't available yet. Try again in a few seconds.")
 
 
 # ---------------------------------------------------------------- review

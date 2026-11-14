@@ -1,0 +1,271 @@
+{
+  "label": "v0.3",
+  "set": "dev",
+  "runs": 3,
+  "pipeline_version": "v0/extract-v2",
+  "systems": {
+    "pipeline": {
+      "case_pass_rate": {
+        "mean": 0.9444333333333333,
+        "min": 0.8333,
+        "max": 1.0
+      },
+      "critical_failure_cases": {
+        "mean": 0.6666666666666666,
+        "min": 0,
+        "max": 2
+      },
+      "escalation_recall": {
+        "mean": 0.9444333333333333,
+        "min": 0.8333,
+        "max": 1.0
+      },
+      "escalation_precision": {
+        "mean": 0.9444333333333333,
+        "min": 0.8333,
+        "max": 1.0
+      },
+      "under_prioritization_count": {
+        "mean": 0.6666666666666666,
+        "min": 0,
+        "max": 2
+      },
+      "must_not_violation_cases": {
+        "mean": 0.3333333333333333,
+        "min": 0,
+        "max": 1
+      },
+      "schema_validity_rate": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "intent_accuracy": {
+        "mean": 0.9722333333333333,
+        "min": 0.9167,
+        "max": 1.0
+      },
+      "priority_exact_accuracy": {
+        "mean": 0.8333333333333334,
+        "min": 0.75,
+        "max": 0.9167
+      },
+      "routing_accuracy": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "escalation_reason_recall": {
+        "mean": 0.9523666666666667,
+        "min": 0.8571,
+        "max": 1.0
+      },
+      "missing_info_recall": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "human_touch_rate": {
+        "mean": 0.5277666666666667,
+        "min": 0.5,
+        "max": 0.5833
+      },
+      "latency_ms_median": {
+        "mean": 4152.906666666667,
+        "min": 3665.61,
+        "max": 4987.43
+      },
+      "latency_ms_p95": {
+        "mean": 9329.243333333332,
+        "min": 4233.44,
+        "max": 14478.05
+      }
+    },
+    "keyword_baseline": {
+      "case_pass_rate": {
+        "mean": 0.4167,
+        "min": 0.4167,
+        "max": 0.4167
+      },
+      "critical_failure_cases": {
+        "mean": 6,
+        "min": 6,
+        "max": 6
+      },
+      "escalation_recall": {
+        "mean": 0.3333,
+        "min": 0.3333,
+        "max": 0.3333
+      },
+      "escalation_precision": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "under_prioritization_count": {
+        "mean": 1,
+        "min": 1,
+        "max": 1
+      },
+      "must_not_violation_cases": {
+        "mean": 5,
+        "min": 5,
+        "max": 5
+      },
+      "schema_validity_rate": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "intent_accuracy": {
+        "mean": 0.8333,
+        "min": 0.8333,
+        "max": 0.8333
+      },
+      "priority_exact_accuracy": {
+        "mean": 0.8333,
+        "min": 0.8333,
+        "max": 0.8333
+      },
+      "routing_accuracy": {
+        "mean": 0.8333,
+        "min": 0.8333,
+        "max": 0.8333
+      },
+      "escalation_reason_recall": {
+        "mean": 0.2857,
+        "min": 0.2857,
+        "max": 0.2857
+      },
+      "missing_info_recall": {
+        "mean": 0.5,
+        "min": 0.5,
+        "max": 0.5
+      },
+      "human_touch_rate": {
+        "mean": 0.5,
+        "min": 0.5,
+        "max": 0.5
+      },
+      "latency_ms_median": {
+        "mean": 0.99,
+        "min": 0.99,
+        "max": 0.99
+      },
+      "latency_ms_p95": {
+        "mean": 2.99,
+        "min": 2.99,
+        "max": 2.99
+      }
+    },
+    "naive_llm_baseline": {
+      "case_pass_rate": {
+        "mean": 0.5833,
+        "min": 0.5833,
+        "max": 0.5833
+      },
+      "critical_failure_cases": {
+        "mean": 1,
+        "min": 1,
+        "max": 1
+      },
+      "escalation_recall": {
+        "mean": 0.8333,
+        "min": 0.8333,
+        "max": 0.8333
+      },
+      "escalation_precision": {
+        "mean": 0.7143,
+        "min": 0.7143,
+        "max": 0.7143
+      },
+      "under_prioritization_count": {
+        "mean": 0,
+        "min": 0,
+        "max": 0
+      },
+      "must_not_violation_cases": {
+        "mean": 1,
+        "min": 1,
+        "max": 1
+      },
+      "schema_validity_rate": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "intent_accuracy": {
+        "mean": 0.9167,
+        "min": 0.9167,
+        "max": 0.9167
+      },
+      "priority_exact_accuracy": {
+        "mean": 0.4167,
+        "min": 0.4167,
+        "max": 0.4167
+      },
+      "routing_accuracy": {
+        "mean": 0.9167,
+        "min": 0.9167,
+        "max": 0.9167
+      },
+      "escalation_reason_recall": {
+        "mean": 0.7143,
+        "min": 0.7143,
+        "max": 0.7143
+      },
+      "missing_info_recall": {
+        "mean": 0.25,
+        "min": 0.25,
+        "max": 0.25
+      },
+      "human_touch_rate": {
+        "mean": 0.75,
+        "min": 0.75,
+        "max": 0.75
+      },
+      "latency_ms_median": {
+        "mean": 23313.55,
+        "min": 23313.55,
+        "max": 23313.55
+      },
+      "latency_ms_p95": {
+        "mean": 50563.8,
+        "min": 50563.8,
+        "max": 50563.8
+      }
+    }
+  },
+  "case_passes": {
+    "TC01": 3,
+    "TC02": 2,
+    "TC03": 3,
+    "TC04": 2,
+    "TC05": 3,
+    "TC06": 3,
+    "TC07": 3,
+    "TC08": 3,
+    "TC09": 3,
+    "TC10": 3,
+    "TC11": 3,
+    "TC12": 3
+  },
+  "case_failures": {
+    "TC01": [],
+    "TC02": [
+      "CRITICAL: under-prioritised P1->P2, missed must-escalate, must_not violated; must-not: escalate=false forbidden; priority=P2 (under); escalate=False; reasons=[]"
+    ],
+    "TC03": [],
+    "TC04": [
+      "CRITICAL: under-prioritised P2->P3; intent=general_inquiry; priority=P3 (under); escalate=True"
+    ],
+    "TC05": [],
+    "TC06": [],
+    "TC07": [],
+    "TC08": [],
+    "TC09": [],
+    "TC10": [],
+    "TC11": [],
+    "TC12": []
+  }
+}

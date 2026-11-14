@@ -1,6 +1,7 @@
-"""Step 2: detect and redact secrets BEFORE any text leaves our process (privacy boundary).
+﻿"""Step 2: detect and redact secrets BEFORE any text leaves our process (privacy boundary).
 
-Deterministic, no LLM. Redacts payment card numbers (Luhn-checked), CVV, card expiry, and passwords.
+Deterministic, no LLM. Redacts payment card numbers (Luhn-checked), CVV, card expiry, passwords, and API tokens /
+secret keys (added Day 4, failure F3).
 Names and email addresses are kept: triage needs them, and this repo uses synthetic data only (see design doc §6).
 """
 from __future__ import annotations
@@ -12,6 +13,13 @@ _CARD = re.compile(r"(?<!\d)(?:\d[ -]?){12,18}\d(?!\d)")
 _CVV = re.compile(r"(?i)\b(cvv|cvc|security code)\s*[:=]?\s*\d{3,4}\b")
 _EXPIRY = re.compile(r"(?i)\b(exp(?:iry|ires)?\.?)\s*[:=]?\s*(0[1-9]|1[0-2])\s*/\s*\d{2,4}\b")
 _PASSWORD = re.compile(r"(?i)\b(password|passwd|pwd|passcode)(\s+is|\s*[:=])\s*(\S+)")
+
+
+# API tokens: well-known prefixes (sk_live_, sk-, pk_test_, ghp_, xoxb-, AKIA...) or a long opaque value after a label.
+_TOKEN_PREFIX = re.compile(r"\b(?:(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{8,}|sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}"
+                           r"|xox[abprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|lsv2_[a-z]{2}_[A-Za-z0-9_]{16,})")
+_TOKEN_LABEL = re.compile(r"(?i)\b(api[ _-]?key|access[ _-]?token|auth[ _-]?token|token|secret(?:[ _-]?key)?|bearer)"
+                          r"(\s+is|\s*[:=]|\s)\s*(?=[A-Za-z0-9_\-]*\d)([A-Za-z0-9_\-]{16,})")
 
 
 def _luhn_ok(digits: str) -> bool:
@@ -55,4 +63,8 @@ def redact(text: str) -> RedactionResult:
     if _PASSWORD.search(out):
         kinds.append("password")
         out = _PASSWORD.sub(lambda m: f"{m.group(1)}{m.group(2)} [REDACTED_SECRET]", out)
+    if _TOKEN_PREFIX.search(out) or _TOKEN_LABEL.search(out):
+        kinds.append("api_token")
+        out = _TOKEN_PREFIX.sub("[REDACTED_TOKEN]", out)
+        out = _TOKEN_LABEL.sub(lambda m: f"{m.group(1)}{m.group(2)} [REDACTED_TOKEN]", out)
     return RedactionResult(text=out, kinds=sorted(set(kinds)))

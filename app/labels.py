@@ -1,4 +1,4 @@
-"""Plain-language labels for the review UI. Codes stay in data/contracts; people see these words."""
+﻿"""Plain-language labels for the review UI. Codes stay in data/contracts; people see these words."""
 from __future__ import annotations
 
 from src.taxonomy import load_taxonomy
@@ -34,6 +34,7 @@ RULE = {
     "R-P1": "Priority set to P1: data loss, security issue, or many users blocked with no workaround",
     "R-P2": "Priority set to P2: one user blocked, a job affected today, admin locked out, payment/churn risk",
     "R-P4": "Priority set to P4: request or question with no urgency",
+    "R-C1": "Many users affected, a job today is hit and there is no workaround, so the work is treated as blocked",
     "R-T2": "Unclear ticket kept at P3 or higher (never dropped to Low)",
     "R-T4": "Cancellation threat made the main category; the original problem kept as second category",
     "R-M1": "Enterprise customer: normal technical issue raised to High",

@@ -1,4 +1,4 @@
-﻿"""Pipeline tests with a FAKE LLM (no network, no cost): safety steps, rules, retry, fallback, handoff."""
+"""Pipeline tests with a FAKE LLM (no network, no cost): safety steps, rules, retry, fallback, handoff."""
 import json
 from datetime import datetime, timezone
 
@@ -153,7 +153,7 @@ def test_invalid_json_then_valid_retries_once():
 
 @pytest.mark.parametrize("responses", [
     ("nope", "still nope"),
-    (facts(intent="refund_request"), facts(priority="P1")),
+    (facts(intent="refund_request"), facts(confidence="high")),
     (LLMCallError("timeout"), LLMCallError("timeout")),
 ])
 def test_two_failures_fall_back_to_valid_human_triage(responses):
@@ -193,3 +193,54 @@ def test_edits_are_validated_against_contract(tmp_path, monkeypatch):
         handoff.apply_edits(r, {"priority": "P9"})
     with pytest.raises(ValueError):
         handoff.apply_edits(r, {"summary": "x"})
+
+
+# ---------------------------------------------------------------- Day 4 hardening (failure analysis F1-F4)
+def test_us_spelling_of_a_key_is_accepted_not_a_fallback():
+    """F1: 'unauthorized' (US spelling) used to fail validation twice and send the ticket to manual triage."""
+    d = dict(facts())
+    d["duplicate_or_unauthorized_payment"] = d.pop("duplicate_or_unauthorised_payment")
+    d["security_or_unauthorized_access"] = d.pop("security_or_unauthorised_access")
+    r, tr = triage(BY_ID["TC01"].ticket, llm=fake_llm(d))
+    assert tr.status == "ok" and tr.llm_attempts == 1
+
+
+def test_model_cannot_set_priority_with_an_extra_key():
+    """Unknown keys are dropped, so a 'priority' key from the model has no effect; rules still decide."""
+    r, tr = triage(BY_ID["TC01"].ticket, llm=fake_llm(facts(priority="P1", queue="product", escalate=False)))
+    assert tr.status == "ok" and r.priority == BY_ID["TC01"].expected.priority and r.queue == "billing"
+
+
+def test_missing_key_still_falls_back():
+    d = dict(facts())
+    del d["churn_signal"]
+    r, tr = triage(BY_ID["TC01"].ticket, llm=fake_llm(d, d))
+    assert tr.status == "fallback" and r.priority == "P2" and r.escalate  # F4: unknown urgency fails high
+
+
+def test_contradictory_facts_are_treated_as_blocked_p1():
+    """F2: whole team + job today + no workaround, but the model said 'not blocked' -> rule R-C1 makes it P1."""
+    r, tr = triage(BY_ID["TC02"].ticket, llm=fake_llm(facts(
+        intent="mobile_app_sync", scope="whole_team_or_company", core_workflow_blocked=False,
+        workaround_available=False, affects_job_today=True)))
+    assert r.priority == "P1" and "p1_incident" in r.escalation_reasons and "R-C1" in tr.rules_fired
+
+
+def test_single_user_job_today_stays_p2():
+    r, tr = triage(BY_ID["TC02"].ticket, llm=fake_llm(facts(
+        intent="mobile_app_sync", scope="single_user", core_workflow_blocked=False,
+        workaround_available=False, affects_job_today=True)))
+    assert r.priority == "P2" and "R-C1" not in tr.rules_fired
+
+
+@pytest.mark.parametrize("text, hit", [
+    ("uses this token: sk_live_DEMO0token1234 for the API", True),
+    ("api key = AbCdEf1234567890XyZ99", True),
+    ("the token expired yesterday and we need a new one", False),
+    ("job reference JOB-2026-000123-ABCDEF as a token of appreciation", False),
+])
+def test_api_tokens_are_redacted(text, hit):
+    from src.pipeline.redact import redact
+    r = redact(text)
+    assert ("api_token" in r.kinds) is hit
+    assert ("DEMO0token" not in r.text) and ("AbCdEf1234567890" not in r.text)

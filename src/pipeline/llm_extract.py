@@ -14,6 +14,7 @@ from typing import Callable, Optional
 from pydantic import ValidationError
 
 from src.llm_client import LLMCallError, LLMResponse, call_llm
+from src.observability import trace_run
 from src.schemas import ExtractedFacts
 from src.taxonomy import load_settings, load_taxonomy
 
@@ -72,18 +73,44 @@ class ExtractionOutcome:
     input_tokens: int = 0
     output_tokens: int = 0
     raw: list[str] = field(default_factory=list)
+    repairs: list[str] = field(default_factory=list)
+
+
+# Day 4, failure F1: the model sometimes uses US spelling for a key ("unauthorized"). Strict validation rejected
+# the whole answer twice and the ticket fell back to manual triage. Known aliases are mapped; unknown extra keys are
+# dropped. A MISSING key or a wrong value type still fails validation (retry, then fallback).
+_ALLOWED = set(ExtractedFacts.model_fields)
+
+
+def normalise_keys(data: dict) -> tuple[dict, list[str]]:
+    out, notes = {}, []
+    for k, v in data.items():
+        key = k if k in _ALLOWED else k.replace("unauthorized", "unauthorised").replace("prioritiz", "prioritis")
+        if key not in _ALLOWED:
+            notes.append(f"dropped unknown key {k!r}")
+            continue
+        if key != k:
+            notes.append(f"renamed {k!r} -> {key!r}")
+        out.setdefault(key, v)
+    return out, notes
 
 
 def extract_facts(subject: str, body: str, channel: str,
                   llm: Callable[..., LLMResponse] = call_llm) -> ExtractionOutcome:
-    cfg = load_settings()["pipeline"]
+    cfg, llm_cfg = load_settings()["pipeline"], load_settings()["llm"]
     system = build_system_prompt()
     user = build_user_prompt(subject, body, channel)
     out = ExtractionOutcome(facts=None, attempts=0)
     for _ in range(1 + cfg["llm_retries"]):
         out.attempts += 1
         try:
-            r = llm(user, system=system, json_mode=True, thinking=cfg["thinking"], max_tokens=cfg["max_tokens"])
+            with trace_run("llm_extract", run_type="llm", inputs={"system": system, "user": user},
+                           metadata={"ls_provider": llm_cfg["provider"], "ls_model_name": llm_cfg["model"],
+                                     "prompt_version": PROMPT_VERSION, "attempt": out.attempts}) as span:
+                r = llm(user, system=system, json_mode=True, thinking=cfg["thinking"], max_tokens=cfg["max_tokens"])
+                span.end(outputs={"text": r.text, "usage_metadata": {
+                    "input_tokens": r.input_tokens, "output_tokens": r.output_tokens,
+                    "total_tokens": r.input_tokens + r.output_tokens}})
         except LLMCallError as e:
             out.errors.append(f"api: {e}"[:300])
             continue
@@ -92,8 +119,11 @@ def extract_facts(subject: str, body: str, channel: str,
         out.raw.append(r.text)
         try:
             data = json.loads(r.text)
-            if isinstance(data, dict) and data.get("secondary_intent") == data.get("intent"):
-                data["secondary_intent"] = None  # harmless model slip; not worth a retry
+            if isinstance(data, dict):
+                data, notes = normalise_keys(data)
+                out.repairs += notes
+                if data.get("secondary_intent") == data.get("intent"):
+                    data["secondary_intent"] = None  # harmless model slip; not worth a retry
             out.facts = ExtractedFacts.model_validate(data)
             return out
         except (json.JSONDecodeError, ValidationError) as e:

@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 
 import src.pipeline.run as pipeline_run
 from app import labels as L
@@ -72,7 +72,34 @@ if not visible:
             icon=":material/inbox:")
     st.stop()
 
-visible = sorted(visible, key=lambda t: t.received_at)
+
+
+def _rank(t) -> tuple:
+    """Riskiest first: suggested priority (P1 > P2 ...), needs-a-lead first, then oldest. Unprocessed tickets last."""
+    sug = suggested.get(t.ticket_id) if snap.status[t.ticket_id] == "ready_for_review" else None
+    if not sug:
+        return (9, 1, t.received_at)
+    return (int(sug[0].priority[1]), 0 if sug[0].escalate else 1, t.received_at)
+
+
+FILTERS = {"All": lambda t, r: True,
+           "Needs a lead": lambda t, r: bool(r and r.escalate),
+           "P1 / P2": lambda t, r: bool(r and r.priority in ("P1", "P2")),
+           "Low confidence": lambda t, r: bool(r and r.confidence < ui.TAX["thresholds"]["min_confidence_auto_accept"]),
+           "Not processed": lambda t, r: r is None}
+choice = st.segmented_control("Show", list(FILTERS), default="All", key="inbox_filter", required=True,
+                              label_visibility="collapsed")
+
+
+def _ready(t):
+    return suggested[t.ticket_id][0] if t.ticket_id in suggested and snap.status[t.ticket_id] == "ready_for_review" else None
+
+
+visible = sorted((t for t in visible if FILTERS[choice](t, _ready(t))), key=_rank)
+if not visible:
+    st.info(f"No tickets match **{choice}**. Choose **All** to see everything waiting.", title="Nothing here",
+            icon=":material/filter_alt_off:")
+    st.stop()
 ids = [t.ticket_id for t in visible]
 if st.session_state.selected_ticket not in ids:
     st.session_state.selected_ticket = ids[0]
@@ -104,7 +131,7 @@ with list_col:
     )
     if event.selection.rows:
         st.session_state.selected_ticket = ids[event.selection.rows[0]]
-    st.caption(f"Click a row to open the ticket. Source: `{ui.path_label(adapters.get_queue().path)}`")
+    st.caption(f"Riskiest first: P1 and tickets that need a lead are at the top. Click a row to open it. Source: `{ui.path_label(adapters.get_queue().path)}`")
 
 t = next(x for x in visible if x.ticket_id == st.session_state.selected_ticket)
 with detail_col:

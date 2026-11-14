@@ -20,7 +20,7 @@ with st.container(horizontal=True):
                     "Written rules do that.")
     with st.container(border=True):
         st.markdown(":material/visibility_off: **Privacy**")
-        st.markdown("Card numbers and passwords are hidden **before** the assistant sees the ticket.")
+        st.markdown("Card numbers, passwords and API tokens are hidden **before** the assistant sees the ticket.")
 
 st.subheader("Priorities", anchor=False)
 st.table({

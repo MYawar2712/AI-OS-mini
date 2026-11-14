@@ -2,7 +2,7 @@
 
 > **Single source of truth for progress.** Every brief requirement → status → evidence → next action.
 > Legend: ✅ done · 🟡 partial / done with caveat · ❌ not started · 👤 needs the owner (a decision, account, or a real person).
-> Last updated: 2026-11-13 (Day 3 built; owner run 3.10 pending).
+> Last updated: 2026-11-14 (Day 4 built; person-dependent items 3.10 and 4.8 still open).
 
 ---
 
@@ -62,15 +62,15 @@ src/
   adapters/  ❌    ticket_source.py  crm.py  ticketing.py  notifier.py      (Day 3)
   observability.py ❌                                                        (Day 3)
 app/  ✅           review UI (Streamlit) for non-developers: built early, polish on Day 5
-scripts/           run_day1 ✅ run_day2 ✅ triage ✅ compare_models ✅ … run_eval ❌ (Day 4)
+scripts/           run_day1 ✅ run_day2 ✅ triage ✅ compare_models ✅ … run_eval ✅ langsmith_eval ✅
 baselines/ ✅      keyword, naive LLM
-eval/              test_cases.jsonl ✅(12 dev)  test_cases_holdout.jsonl ✅(12)  adversarial ❌(Day 4)
+eval/              test_cases.jsonl ✅(12 dev)  test_cases_holdout.jsonl ✅(12)  test_cases_adversarial.jsonl ✅(10)
                    rubric.md ✅  metrics.py ✅  results/ ✅
 data/synthetic/ ✅ customers, KB          data/runs/ (git-ignored) audit + outbox ✅
-docs/              PLAN.md ✅  day1/ ✅  day2/ ✅  day3/ ❌  day4/ ❌  day5/ ❌
+docs/              PLAN.md ✅  day1/ ✅  day2/ ✅  day3/ ✅  day4/ ✅  day5/ ❌
                    decisions.md ✅  assumptions.md ✅
-                   README (user) ✅→🟡  RUNBOOK.md ❌  CASE_STUDY.md ❌  AI_COLLABORATION.md ❌👤
-tests/ ✅          196 tests (incl. 12 UI, 22 adapter tests), no network needed
+                   README (user) ✅  RUNBOOK.md ✅  CASE_STUDY.md ❌  AI_COLLABORATION.md ❌👤
+tests/ ✅          238 tests (incl. 14 UI, 23 adapter tests), no network needed
 ```
 
 ### 1.3 Contracts (stable; change only with an ADR)
@@ -85,12 +85,12 @@ tests/ ✅          196 tests (incl. 12 UI, 22 adapter tests), no network needed
 | 1 Discover & baseline | ✅ done (with documented gaps) | [day1/00_day1_summary.md](day1/00_day1_summary.md) | 👤 real-user interview not possible (documented) |
 | 2 Design & v0 | ✅ done, pushed (`d611d24`) | [day2/00_day2_summary.md](day2/00_day2_summary.md) | Latency gate G9 fails (6.3 s vs 5 s), carried to Day 3 |
 | 3 Working core | 🟡 built and verified; owner run pending | [day3/00_day3_summary.md](day3/00_day3_summary.md) | 👤 owner run (3.10), recorded in [day3/02_proxy_user_run.md](day3/02_proxy_user_run.md) |
-| 4 Evaluate & harden | ❌ | n/a | 👤 proxy-user feedback |
+| 4 Evaluate & harden | 🟡 built; user feedback open | [day4/00_day4_summary.md](day4/00_day4_summary.md) | 👤 feedback from a person (4.8); 👤 model price (cost metric) |
 | 5 Handoff & present | ❌ | n/a | 👤 record the 5-min video; 👤 AI collaboration note decision |
 
 **Built ahead of schedule (2026-11-12, owner request; Day 3 plan left unchanged):** Streamlit review UI `app/review.py` ("Triage Desk"): inbox of synthetic tickets, add-a-ticket form, plain-language triage card, "Why?" panel, Accept / Edit / Reject → outbox + audit, Activity tab, Help tab. 6 UI tests (`tests/test_app.py`), verified with the real model on TC10. Relevant to tasks 3.6 / 5.5. Day 3 integrations will plug into it. **Redesigned the same day** with Streamlit's official bundled agent skill (ADR-024): multipage nav (Inbox / New ticket / Activity / Help), theme config, selectable inbox table, native badges; 10 UI tests; verified via the agent API.
 
-Last pushed commit: `d611d24` (Day 2 + UI). Day 3 is uncommitted until the owner runs the commit command.
+Last pushed commit: `16498b2` (Day 3). Day 4 is uncommitted until the owner runs the commit command.
 Owner-wide pending: 👤 `qwen3.8-27b` price per token (cost metric) · 👤 rotate the Alibaba API key.
 
 ---
@@ -166,26 +166,26 @@ Owner decisions: O3.1 = default (SQLite CRM, CSV ticket queue with write-back, e
 
 ---
 
-## 6. Day 4: Evaluate, break and harden. Status: ❌
+## 6. Day 4: Evaluate, break and harden. Status: 🟡 built 2026-11-14; 4.8 (person) open
 
 **Brief:** full test-set results + baseline comparison · quality/latency/cost/manual-touch metrics · ≥ 3 failure cases with root cause · retries/fallbacks/validation/confidence/human approval as needed · before-and-after regression · feedback from the target/proxy user + changes made.
 **Key question:** can you explain quality and failure across multiple conditions, not just one success?
 
 ### Tasks
-- [ ] **4.1 Full results.** All systems (keyword, naive LLM, pipeline v0, pipeline v1) on dev + held-out. One script: `scripts/run_eval.py` → `eval/results/day4/`.
-- [ ] **4.2 Variance.** Run the pipeline 3× on each set and report mean ± range (model non-determinism, seen on Day 2: priority 83–92%).
-- [ ] **4.3 Break it (adversarial set).** `eval/test_cases_adversarial.jsonl` (~8–10): new injection styles (non-English, base64, "as the admin…"), very long threads, empty body, non-English-dominant text, attachment-only ticket, API timeout / invalid JSON (fault injection), missing customer file, malformed CSV row.
-- [ ] **4.4 ≥ 3 failure analyses** in `docs/day4/01_failure_analysis.md`: symptom → root cause → fix → evidence. Candidates:
+- [x] **4.1 Full results.** All systems (keyword, naive LLM, pipeline v0, pipeline v1) on dev + held-out. One script: `scripts/run_eval.py` → `eval/results/day4/`.
+- [x] **4.2 Variance.** Run the pipeline 3× on each set and report mean ± range (model non-determinism, seen on Day 2: priority 83–92%).
+- [x] **4.3 Break it (adversarial set).** `eval/test_cases_adversarial.jsonl` (~8–10): new injection styles (non-English, base64, "as the admin…"), very long threads, empty body, non-English-dominant text, attachment-only ticket, API timeout / invalid JSON (fault injection), missing customer file, malformed CSV row.
+- [x] **4.4 ≥ 3 failure analyses** in `docs/day4/01_failure_analysis.md`: symptom → root cause → fix → evidence. Candidates:
   - TC19: a quote read as a general question
   - latency
   - run-to-run priority variance
   - adversarial misses
   - a proxy-user confusion from Day 3
-- [ ] **4.5 Hardening.** Targeted fixes (rules, prompt, retries, confidence indicator on the card, extra human-approval triggers). Each fix tied to a failure ID.
-- [ ] **4.6 Before/after regression.** v0 vs v1 on dev, held-out and adversarial, in one table (`docs/day4/02_regression.md`). Report honestly where nothing improved. Held-out is run **once** for v1 and logged.
-- [ ] **4.7 Metrics.** Quality (pass rate, escalation recall/precision, priority/routing), latency (median/p95), cost (needs the 👤 price), manual-touch (human-touch rate + edit rate from the audit log).
-- [ ] **4.8 👤 Proxy-user feedback round 2.** Same or new proxy user tries v1. Record feedback → changes → status in `docs/day4/03_user_feedback.md`.
-- [ ] **4.9 Day 4 summary** with the key-question answer; ADRs; update §2.
+- [x] **4.5 Hardening.** Targeted fixes (rules, prompt, retries, confidence indicator on the card, extra human-approval triggers). Each fix tied to a failure ID.
+- [x] **4.6 Before/after regression.** v0 vs v1 on dev, held-out and adversarial, in one table (`docs/day4/02_regression.md`). Report honestly where nothing improved. Held-out is run **once** for v1 and logged.
+- [x] **4.7 Metrics.** *(Quality + latency measured; cost waits for the price; rep effort waits for a person.)* Quality (pass rate, escalation recall/precision, priority/routing), latency (median/p95), cost (needs the 👤 price), manual-touch (human-touch rate + edit rate from the audit log).
+- [ ] **4.8 👤 Proxy-user feedback round 2.** *(Open: no person yet. Stated as a gap in day4/03_user_feedback.md.)* Same or new proxy user tries v1. Record feedback → changes → status in `docs/day4/03_user_feedback.md`.
+- [x] **4.9 Day 4 summary** with the key-question answer; ADRs; update §2.
 
 **Exit criteria:**
 - Safety gates G1–G5 pass on dev + held-out + adversarial (or each failure is explained).

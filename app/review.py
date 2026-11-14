@@ -40,6 +40,8 @@ page = st.navigation(
                 help="Add a customer message to the ticket queue, for demos and quick checks. Use made-up details only."),
         st.Page(PAGES / "activity.py", title="Activity", icon=":material/monitoring:",
                 help="Everything reviewed so far: accepted, edited and rejected tickets, escalations and time to decide."),
+        st.Page(PAGES / "quality.py", title="Quality", icon=":material/verified:",
+                help="How well the assistant does on labelled test tickets, compared with simpler approaches, and which tickets it gets wrong."),
         st.Page(PAGES / "help.py", title="Help", icon=":material/help:",
                 help="How the Triage Desk works, what the assistant does and never does, and what each priority means."),
     ],
