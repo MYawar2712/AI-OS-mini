@@ -49,7 +49,8 @@ def customer_name(cid: str | None) -> str:
 
 
 def path_label(d) -> str:
-    return (d.relative_to(ROOT) if d.is_relative_to(ROOT) else d).as_posix()
+    """Path shown to the rep: relative inside the project, folder/file name only outside it."""
+    return d.relative_to(ROOT).as_posix() if d.is_relative_to(ROOT) else d.name
 
 
 # ---------------------------------------------------------------- display

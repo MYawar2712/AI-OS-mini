@@ -27,7 +27,7 @@ REASON = {
     "conflicting_intents": "Two separate problems for different teams",
     "missing_account_id": "Customer account not identified",
     "prompt_injection_suspected": "Ticket contains instructions aimed at the AI (ignored, please check)",
-    "sensitive_data_present": "Card details or a password were pasted in (hidden from the AI)",
+    "sensitive_data_present": "Card details, a password or an API token were pasted in (hidden from the AI)",
     "low_confidence": "Ticket is unclear or the assistant is unsure",
 }
 RULE = {
@@ -47,15 +47,23 @@ CHANNEL_ICON = {"email": ":material/mail:", "portal": ":material/language:", "ch
                 "phone_note": ":material/call:"}
 
 
+REASON_SHORT = {
+    "p1_incident": "critical incident (P1)", "churn_risk": "customer may cancel", "legal_or_security": "legal or security concern",
+    "conflicting_intents": "two problems for different teams", "missing_account_id": "customer account not identified",
+    "prompt_injection_suspected": "instructions aimed at the AI", "sensitive_data_present": "secret data pasted in",
+    "low_confidence": "ticket unclear or assistant unsure",
+}
+
+
 def missing(code: str) -> str:
     return load_taxonomy()["missing_info_fields"].get(code, code)
 
 
 def rule(code: str) -> str:
     if code.startswith("R-E:"):
-        return "Needs a lead because: " + ", ".join(code[4:].split(","))
+        return "Needs a lead because: " + "; ".join(REASON_SHORT.get(r, r) for r in code[4:].split(","))
     if code.startswith("R-MI:-"):
-        return f"Not asking for '{code[6:]}' (already known)"
+        return f"Not asking for: {missing(code[6:])} (already known)"
     if code.startswith("R-MI:"):
-        return f"Added to 'ask the customer': {code[5:]}"
+        return f"Added to 'ask the customer': {missing(code[5:])}"
     return RULE.get(code, code)

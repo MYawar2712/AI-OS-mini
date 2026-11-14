@@ -112,9 +112,9 @@ def _suggestion(tid: str) -> str:
     return f"{r.priority}{' · lead' if r.escalate else ''}"
 
 
-rows = [{"Subject": t.subject, "From": t.from_name, "Customer": ui.customer_name(t.customer_id),
-         "Channel": L.CHANNEL_TEXT[t.channel], "Received": t.received_at.replace(tzinfo=None),
-         "Suggested": _suggestion(t.ticket_id), "Status": status[t.ticket_id]} for t in visible]
+rows = [{"Subject": t.subject, "Suggested": _suggestion(t.ticket_id), "Status": status[t.ticket_id],
+         "Customer": ui.customer_name(t.customer_id), "From": t.from_name,
+         "Channel": L.CHANNEL_TEXT[t.channel], "Received": t.received_at.replace(tzinfo=None)} for t in visible]
 
 list_col, detail_col = st.columns([2, 3], gap="large")
 with list_col:
@@ -123,7 +123,7 @@ with list_col:
         column_config={
             "Subject": st.column_config.TextColumn(width="medium", pinned=True),
             "Received": st.column_config.DatetimeColumn(format="D MMM, HH:mm"),
-            "Suggested": st.column_config.TextColumn(help="Priority pre-filled by the assistant; 'lead' = needs a lead"),
+            "Suggested": st.column_config.TextColumn(width="small", help="Priority pre-filled by the assistant; 'lead' = needs a lead"),
             "Status": st.column_config.MultiselectColumn(options=list(ui.STATUS_COLOR),
                                                          color=list(ui.STATUS_COLOR.values())),
         },

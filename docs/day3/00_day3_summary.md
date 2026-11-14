@@ -1,4 +1,4 @@
-﻿# Day 3 summary: the working core
+# Day 3 summary: the working core
 
 > Synthetic data only. "Measured" = measured on the synthetic set in this repo.
 
@@ -10,7 +10,7 @@
 | Validation, structured outputs, logs, useful errors | ✅ | Per-row CSV validation; Pydantic contracts end to end; JSON app log with run IDs; every error says what to do ([01 §3–4](01_integrations.md)) |
 | Config and secrets separated | ✅ | `.env` (secrets only, `.env.example` complete) vs `config/*.yaml`; startup check `scripts/check_setup` + sidebar |
 | One interface | ✅ | Streamlit Triage Desk (`streamlit run app/review.py`), plus CLI `scripts/process_queue` for scheduling |
-| First execution by the target user or a proxy | 🟡👤 | Owner will run it as a fallback proxy (O3.3). Template: [02_proxy_user_run.md](02_proxy_user_run.md). **Not done yet; nothing recorded until it happens** |
+| First execution by the target user or a proxy | 🟡👤 | Owner will run it as a fallback proxy (O3.3). **Not done yet; nothing recorded until it happens** |
 
 ## Measured results
 | Check | Result |

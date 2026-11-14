@@ -4,7 +4,7 @@
 > (no virtual environment, no `.env`, no runtime data), with the app driven through its HTTP test interface and the real model.
 > **What this is not:** a run by a support rep or any independent person. It cannot show whether a person
 > understands the card or the wording. That evidence still has to come from a real session
-> ([02_proxy_user_run.md](02_proxy_user_run.md), task 3.10, still open).
+> (first run by a person: still open).
 > Date: 2026-11-13 · Windows 11, Python 3.14.2 · synthetic data only.
 
 ## Steps and measured times

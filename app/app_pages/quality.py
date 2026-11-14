@@ -1,4 +1,4 @@
-"""Quality: how well the assistant does on the labelled test tickets (read from eval/results/day4)."""
+﻿"""Quality: how well the assistant does on the labelled test tickets (read from eval/results/day4)."""
 import json
 
 import streamlit as st
@@ -15,17 +15,25 @@ SYSTEM_TEXT = {"pipeline": "Triage assistant", "keyword_baseline": "Keyword rule
 def load(label: str) -> dict[str, dict]:
     out = {}
     for name in SET_TEXT:
-        p = BASE / label / f"summary_{name}.json"
-        if p.exists():
-            out[name] = json.loads(p.read_text(encoding="utf-8"))
+        # The held-out checkpoint is run separately and saved as "<label>-holdout".
+        for folder in (label, f"{label}-{name}"):
+            p = BASE / folder / f"summary_{name}.json"
+            if p.exists():
+                out[name] = json.loads(p.read_text(encoding="utf-8"))
+                break
     return out
+
+
+def spread(a: dict, fmt: str) -> str:
+    return format(a["max"], fmt) if a["min"] == a["max"] else f"{format(a['min'], fmt)}–{format(a['max'], fmt)}"
 
 
 def pct(a: dict | None) -> str:
     return "n/a" if not a else f"{a['mean']:.0%}"
 
 
-labels = sorted((d.name for d in BASE.iterdir() if d.is_dir() and any(d.glob("summary_*.json"))), reverse=True) \
+labels = sorted((d.name for d in BASE.iterdir() if d.is_dir() and any(d.glob("summary_*.json"))
+                 and not d.name.endswith(tuple(f"-{s}" for s in SET_TEXT))), reverse=True) \
     if BASE.exists() else []
 if not labels:
     st.info("Run `python -m scripts.run_eval --label v1 --sets dev,adversarial --runs 3` to create results.",
@@ -41,14 +49,15 @@ data = load(label)
 for name, d in data.items():
     pipe = d["systems"]["pipeline"]
     st.subheader(SET_TEXT[name], anchor=False)
+    st.caption(f"{len(d['case_passes'])} tickets × {d['runs']} runs. Range across runs for fully-correct tickets: "
+               f"{spread(pipe['case_pass_rate'], '.0%')}.")
     with st.grid(4):
-        rng = "" if pipe["case_pass_rate"]["min"] == pipe["case_pass_rate"]["max"] else \
-            f"{pipe['case_pass_rate']['min']:.0%}–{pipe['case_pass_rate']['max']:.0%} across {d['runs']} runs"
-        st.metric("Tickets fully correct", pct(pipe["case_pass_rate"]), rng or f"{d['runs']} run(s)", delta_color="off",
-                  border=True)
-        st.metric("Dangerous mistakes", f"{pipe['critical_failure_cases']['max']:.0f}", border=True,
-                  help="Worst run. A dangerous mistake is a missed escalation, an under-prioritised P1/P2, a followed "
-                       "hidden instruction, or a repeated secret.")
+        st.metric("Tickets fully correct", pct(pipe["case_pass_rate"]), border=True,
+                  help=f"Average of {d['runs']} runs. Range across runs: {spread(pipe['case_pass_rate'], '.0%')}.")
+        st.metric("Dangerous mistakes per run", spread(pipe["critical_failure_cases"], ".0f"), border=True,
+                  help="Lowest to highest across the runs. A dangerous mistake is a missed escalation, an "
+                       "under-prioritised P1/P2, a forbidden outcome (such as a followed hidden instruction), or a "
+                       "repeated secret.")
         st.metric("Escalations caught", pct(pipe["escalation_recall"]), border=True,
                   help="Of the tickets that needed a lead, how many the assistant flagged.")
         st.metric("Typical wait per ticket", f"{pipe['latency_ms_median']['mean'] / 1000:.1f} s", border=True)
@@ -56,7 +65,7 @@ for name, d in data.items():
     if len(d["systems"]) > 1:
         chart = [{"System": SYSTEM_TEXT.get(s, s), "Tickets fully correct (%)": round(100 * v["case_pass_rate"]["mean"])}
                  for s, v in d["systems"].items() if v.get("case_pass_rate")]
-        st.bar_chart(chart, x="System", y="Tickets fully correct (%)", horizontal=True, height=200)
+        st.bar_chart(chart, x="System", y="Tickets fully correct (%)", horizontal=True, height=200, color="#3B82F6")
 
     with st.expander(f"Ticket by ticket ({len(d['case_passes'])})", icon=":material/checklist:"):
         st.dataframe([{"Case": cid, "Passed": f"{n}/{d['runs']}", "Stable": n in (0, d["runs"]),

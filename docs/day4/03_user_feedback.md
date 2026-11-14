@@ -21,7 +21,7 @@
 ## How to collect the real thing (20 minutes)
 
 1. A person who did not build it follows the README alone, processes the queue, and reviews at least 8 tickets.
-2. They fill in [day3/02_proxy_user_run.md](../day3/02_proxy_user_run.md) and answer:
+2. They note their setup time, where they got stuck and what they misread, and answer:
    - Which card did you trust least, and why?
    - Was there a ticket where you would have accepted a wrong suggestion?
    - What on the card did you not use?
