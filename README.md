@@ -6,6 +6,8 @@ A working triage assistant for Tier-1 support at a B2B field-service software co
 
 > **All data in this repo is synthetic.** No real customers, tickets or people. Every figure is labelled *measured* (on the synthetic test sets with the real model), *estimate*, or *assumed*.
 
+**▶ [Watch the 5-minute demo video](https://drive.google.com/file/d/1cC4W0cA24JfRQlw4x3d-eClBaBBjJuGY/view?usp=drive_link)**
+
 ![The Triage Desk inbox: tickets sorted riskiest first, with the pre-filled triage card](docs/images/inbox.png)
 
 ## Results (measured)
@@ -87,6 +89,7 @@ To add a ticket, use **New ticket**, or add a row with status `new` to the CSV. 
 
 | Read this | For |
 |---|---|
+| [Demo video (5 min)](https://drive.google.com/file/d/1cC4W0cA24JfRQlw4x3d-eClBaBBjJuGY/view?usp=drive_link) | The problem, the live flow, safety and failure handling, and the results |
 | [docs/CASE_STUDY.md](docs/CASE_STUDY.md) | The whole project in one page: problem, design, results, failures, limits, next steps |
 | [docs/day4/01_failure_analysis.md](docs/day4/01_failure_analysis.md) | Seven failures traced to root cause, and what changed |
 | [docs/day2/01_system_design.md](docs/day2/01_system_design.md) | Architecture, data contracts, safety boundaries |

@@ -1,4 +1,4 @@
-﻿import streamlit as st
+import streamlit as st
 
 import src.pipeline.run as pipeline_run
 from app import labels as L
@@ -101,6 +101,11 @@ if not visible:
             icon=":material/filter_alt_off:")
     st.stop()
 ids = [t.ticket_id for t in visible]
+# The table remembers a clicked row by its position. When the list changes (filter, processing, reset),
+# that position points at a different ticket or past the end, so forget the old click.
+if st.session_state.get("inbox_table_ids") != ids:
+    st.session_state.pop("inbox_table", None)
+    st.session_state.inbox_table_ids = ids
 if st.session_state.selected_ticket not in ids:
     st.session_state.selected_ticket = ids[0]
 
@@ -116,10 +121,12 @@ rows = [{"Subject": t.subject, "Suggested": _suggestion(t.ticket_id), "Status": 
          "Customer": ui.customer_name(t.customer_id), "From": t.from_name,
          "Channel": L.CHANNEL_TEXT[t.channel], "Received": t.received_at.replace(tzinfo=None)} for t in visible]
 
-list_col, detail_col = st.columns([2, 3], gap="large")
-with list_col:
+# Stacked layout: the ticket list across the full width on top, the selected ticket in full underneath.
+list_area, detail_area = st.container(), st.container(border=True)
+with list_area:
     event = st.dataframe(
-        rows, key="inbox_table", on_select="rerun", selection_mode="single-row", hide_index=True, height=560,
+        rows, key="inbox_table", on_select="rerun", selection_mode="single-row", hide_index=True,
+        height=min(38 + 35 * len(rows), 318),  # about 8 rows visible, then the table scrolls
         column_config={
             "Subject": st.column_config.TextColumn(width="medium", pinned=True),
             "Received": st.column_config.DatetimeColumn(format="D MMM, HH:mm"),
@@ -129,12 +136,13 @@ with list_col:
         },
         alt="Ticket queue: tickets waiting for triage",
     )
-    if event.selection.rows:
-        st.session_state.selected_ticket = ids[event.selection.rows[0]]
+    picked = event.selection.rows
+    if picked and picked[0] < len(ids):
+        st.session_state.selected_ticket = ids[picked[0]]
     st.caption(f"Riskiest first: P1 and tickets that need a lead are at the top. Click a row to open it. Source: `{ui.path_label(adapters.get_queue().path)}`")
 
 t = next(x for x in visible if x.ticket_id == st.session_state.selected_ticket)
-with detail_col:
+with detail_area:
     ui.show_ticket(t)
     s = snap.status[t.ticket_id]
     proposal = suggested.get(t.ticket_id) if s == "ready_for_review" or st.session_state.retriage == t.ticket_id else None
